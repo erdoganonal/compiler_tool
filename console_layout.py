@@ -131,13 +131,28 @@ class ConsoleLayout:
 
     def render(self, parent, **grid_options):
         "Renders the frame"
+        console_frame = tk.Frame(parent)
+        console_frame.grid(**grid_options)
+        console_frame.rowconfigure(0, weight=1)
+        console_frame.columnconfigure(0, weight=1)
 
-        self.text_widget = tk.Text(parent)
-        self.text_widget.grid(**grid_options)
+        vertical_scrool_bar = tk.Scrollbar(console_frame)
+        self.text_widget = tk.Text(
+            console_frame,
+            yscrollcommand=vertical_scrool_bar.set
+        )
+
+        vertical_scrool_bar.config(command=self.text_widget.yview)
+
+        self.text_widget.grid(
+            row=0, column=0,
+            sticky=tk.NSEW
+        )
+        vertical_scrool_bar.grid(row=0, column=1, sticky=tk.N+tk.S+tk.W)
 
         self._output = Output(self.text_widget)
 
-        return self.text_widget
+        return console_frame
 
     @property
     def file(self):
