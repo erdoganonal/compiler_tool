@@ -69,14 +69,14 @@ class ButtonLayout:
             time.sleep(0.5)
             if return_code == ExitCodes.SUCCESS:
                 self._console_layout.write(
-                    "\n\n{GREEN}Operation finished successfully.".format(
+                    "\n{GREEN}Operation finished successfully.".format(
                         **Fore.to_dict()
                     )
                 )
             else:
                 self._console_layout.write(
-                    "{0}\n\nOperation finished with error code "
-                    "{1}\n\n".format(Fore.RED, return_code.value)
+                    "{0}\nOperation finished with error code "
+                    "{1}\n".format(Fore.RED, return_code.value)
                 )
         finally:
             self._is_active = False

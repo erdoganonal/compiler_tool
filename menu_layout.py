@@ -15,7 +15,7 @@ from compiler_helper import TargetTypes, \
 from layout_base import LayoutBase, \
     DEFAULT_USERNAME, DEFAULT_PASSWORD, \
     CONFIG_FILE, merge_line_by_line, Fore, COLORS
-from compiler_layout import COMPILER_HELP
+from compiler_layout import COMPILER_HELP, Cstr
 from transfer_layout import TRANSFER_HELP
 
 HELP = merge_line_by_line(
@@ -100,7 +100,7 @@ class Menu(LayoutBase):
             try:
                 getattr(self._compile_layout, key).set(value)
             except AttributeError:
-                setattr(self._compile_layout, key, value)
+                setattr(self._compile_layout, key, Cstr(value))
 
         # set transfer layout then
         for key, value in config["transfer"].items():

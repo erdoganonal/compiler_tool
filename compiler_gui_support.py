@@ -139,7 +139,7 @@ class WMIC:
 
         return return_code
 
-    def execute2(self, command, **kwargs):
+    def execute2(self, command, exit_code, **kwargs):
         "Executes the given command on the system. Returns the output"
         try:
             output = subprocess.check_output(
@@ -150,9 +150,9 @@ class WMIC:
                 universal_newlines=True,
                 **kwargs
             )
-            return output
+            return output, ExitCodes.SUCCESS
         except subprocess.CalledProcessError as error:
-            return error.output
+            return error.stderr, exit_code
 
 
 class SSH:
@@ -331,7 +331,10 @@ def _compile(compile_string, *, path=None):
     return return_code, output
 
 
-def _execute(command, exit_code):
+def _execute(command, exit_code, devnul=False):
+    if devnul:
+        command = "{0} > {1}".format(command, os.devnull)
+
     if os.system(command) == 0:
         return ExitCodes.SUCCESS
     return exit_code
@@ -366,15 +369,7 @@ def start_transfer(transfer_config):
     return ExitCodes.UNKNOWN
 
 
-def _win_copy_file(transfer_config):
-    drive, folder = transfer_config.destination.split(':')
-
-    access_path = r"\\{hostname}\{drive}$\{folder}".format(
-        hostname=transfer_config.ip_address,
-        drive=drive.lower(),
-        folder=folder.strip('\\')
-    )
-
+def _windows_grant_permissions(transfer_config, access_path):
     Colored.info("Granting access permissions")
 
     return_code = None
@@ -392,8 +387,10 @@ def _win_copy_file(transfer_config):
         )
         return ExitCodes.WINDOWS_PERMISSION_ERROR
 
-    Colored.info("Access granted")
+    return ExitCodes.SUCCESS
 
+
+def _windows_copy_action_handler(transfer_config, access_path):
     if (transfer_config.action == CopyActions.BACKUP
             or transfer_config.action == CopyActions.KEEP_LAST):
         filename = access_path + "\\" + \
@@ -402,17 +399,16 @@ def _win_copy_file(transfer_config):
 
         _execute(
             "move {0} {1}".format(filename, backup_file),
-            exit_code=None
+            exit_code=None, devnul=True
         )
 
         if transfer_config.action == CopyActions.KEEP_LAST:
             files = glob.glob("{0}*".format(filename))
-            Colored.default(backup_file)
             for file_ in files:
                 if backup_file != file_:
                     _execute(
                         "del {0}".format(file_),
-                        exit_code=None
+                        exit_code=None, devnul=True
                     )
     elif transfer_config.action == CopyActions.OVERWRITE:
         # No need to take any action
@@ -420,28 +416,81 @@ def _win_copy_file(transfer_config):
     else:
         raise UnknownType(transfer_config.action, CopyActions)
 
-    # /Y option overwrites the file if exist
-    _execute(
-        "xcopy {path} {access_path} /Y".format(
-            path=transfer_config.target_file.replace('/', '\\'),
-            access_path=access_path,
-        ),
-        exit_code=ExitCodes.WINDOWS_COPY_ERROR
-    )
-
+def _win_reboot_handler(transfer_config):
     if transfer_config.reboot:
         wmic = WMIC(
             ip_address=transfer_config.ip_address,
             username=transfer_config.username,
             password=transfer_config.password
         )
-
-        wmic.execute2(
-            r"C:\Program Files (x86)\Siemens\Automation\CPU 150xS\bin\CPU_Control.exe /allowreboot",
+        output, return_code = wmic.execute2(
+            r"C:\Program Files (x86)\Siemens\Automation\CPU "
+            r"150xS\bin\CPU_Control.exe /allowreboot",
+            exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
         )
-        wmic.execute2("shutdown /r /t 0")
+        if return_code != ExitCodes.SUCCESS:
+            Colored.error(output)
+            return return_code
+        output, return_code = wmic.execute2(
+            "shutdown /r /t 0",
+            exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
+        )
+        if return_code != ExitCodes.SUCCESS:
+            Colored.error(output)
+            return return_code
 
     return ExitCodes.SUCCESS
+
+def _win_copy_file(transfer_config):
+    drive, folder = transfer_config.destination.split(':')
+
+    Colored.info("Trying to access path over shared folder")
+    return_code = _execute(r"dir \\{hostname}\{drive}".format(
+        hostname=transfer_config.ip_address,
+        drive=drive.lower(),
+    ), exit_code=ExitCodes.WINDOWS_PERMISSION_ERROR, devnul=True)
+
+    if return_code == ExitCodes.SUCCESS:
+        use_wmic = False
+    else:
+        use_wmic = True
+
+    if use_wmic:
+        access_path = r"\\{hostname}\{drive}$\{folder}".format(
+            hostname=transfer_config.ip_address,
+            drive=drive.lower(),
+            folder=folder.strip('\\')
+        )
+    else:
+        access_path = r"\\{hostname}\{drive}\{folder}".format(
+            hostname=transfer_config.ip_address,
+            drive=drive.lower(),
+            folder=folder.strip('\\')
+        )
+
+    if use_wmic:
+        return_code = _windows_grant_permissions(transfer_config, access_path)
+        if return_code != ExitCodes.SUCCESS:
+            return return_code
+
+    Colored.info("Access granted\n")
+
+    _windows_copy_action_handler(transfer_config, access_path)
+
+    # /Y option overwrites the file if exist
+    output, return_code = _subprocess(
+        "xcopy {path} {access_path} /Y".format(
+            path=transfer_config.target_file.replace('/', '\\'),
+            access_path=access_path,
+        ),
+        exit_code=ExitCodes.WINDOWS_COPY_ERROR,
+    )
+    if return_code != ExitCodes.SUCCESS:
+        Colored.error(output)
+        return return_code
+    Colored.info(output)
+
+    return _win_reboot_handler(transfer_config)
 
 
 def _linux_copy_file(transfer_config):

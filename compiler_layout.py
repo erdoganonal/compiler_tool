@@ -35,7 +35,8 @@ COMPILER_HELP = __doc__.strip().format(
 )
 
 
-class _Cstr(str):
+class Cstr(str):
+    "A custom string class for ignoring lines which startswith '#'"
     def splitlines(self, *args, **kwargs):
         lines = []
         for line in super().splitlines(*args, **kwargs):
@@ -57,7 +58,7 @@ class CompileLayout(LayoutBase):
         self.edit_linker = None
         self.expand_size = None
         self.partial_compile = None
-        self.partial_compile_text = _Cstr("")
+        self.partial_compile_text = Cstr("")
         self.output = None
         self._transfer_layout = transfer_layout
         self.parent = None
@@ -352,7 +353,7 @@ class CompileLayout(LayoutBase):
     def _render_partial_compile_entry(self):
         def _safe_close(text_widget):
             text = text_widget.get(1.0, tk.END).strip('\n')
-            self.partial_compile_text = _Cstr(text + '\n')
+            self.partial_compile_text = Cstr(text + '\n')
 
             window.destroy()
 
