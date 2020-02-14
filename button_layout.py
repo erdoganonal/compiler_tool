@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from compiler_helper import ExitCodes
-from compiler_gui_support import start_operation
+from compiler_gui_support import start_operation, CompilerError
 from layout_base import PAD, Fore
 
 
@@ -56,27 +56,29 @@ class ButtonLayout:
 
             # pylint: disable=broad-except
             try:
-                return_code = start_operation(
+                start_operation(
                     compiler_config, transfer_config,
                     stdout=self._console_layout.file
+                )
+            except CompilerError as error:
+                self._console_layout.write(
+                    "{0}\nOperation finished with error code "
+                    "{1}\n".format(Fore.RED, error.exit_code)
                 )
             except Exception as err:
                 self._console_layout.write(
                     "{0}{1}".format(Fore.RED, err)
                 )
-                return_code = ExitCodes.UNKNOWN
-
-            time.sleep(0.5)
-            if return_code == ExitCodes.SUCCESS:
+                self._console_layout.write(
+                    "{0}\nOperation finished with error code "
+                    "{1}\n".format(Fore.RED, ExitCodes.UNKNOWN)
+                )
+            else:
+                time.sleep(0.5)
                 self._console_layout.write(
                     "\n{GREEN}Operation finished successfully.".format(
                         **Fore.to_dict()
                     )
-                )
-            else:
-                self._console_layout.write(
-                    "{0}\nOperation finished with error code "
-                    "{1}\n".format(Fore.RED, return_code.value)
                 )
         finally:
             self._is_active = False

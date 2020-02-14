@@ -103,9 +103,27 @@ class Colored:
 class CompilerError(Exception):
     "Base exception for compiler component"
 
+    def __init__(self, message, exit_code):
+        super().__init__()
+        self._exit_code = exit_code
+        self._message = message
+
+        if message:
+            Colored.error(message)
+
+    @property
+    def exit_code(self):
+        "get the return value of the result"
+        return self._exit_code
+
+    @property
+    def message(self):
+        "get the message of the result"
+        return self._message
+
 
 class WMIC:
-    "Executes the commands via WMIO command with given credentials"
+    "Executes the commands via WMIC command with given credentials"
 
     def __init__(self, ip_address, username, password):
         self.ip_address = ip_address
@@ -150,9 +168,9 @@ class WMIC:
                 universal_newlines=True,
                 **kwargs
             )
-            return output, ExitCodes.SUCCESS
+            return output
         except subprocess.CalledProcessError as error:
-            return error.stderr, exit_code
+            raise CompilerError(error.stderr, exit_code)
 
 
 class SSH:
@@ -175,21 +193,7 @@ class SSH:
                 password=self._password,
             )
         except paramiko.SSHException as error:
-            Colored.error(error)
-            return ExitCodes.LINUX_CONNECTION_ERROR
-
-        return ExitCodes.SUCCESS
-
-    def _ssh_exec(self, command, exit_code=ExitCodes.UNKNOWN_LINUX_ERROR):
-        _, stdout, stderr = self.ssh.exec_command(command)
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-
-        if error:
-            Colored.error(error)
-            return '', exit_code
-
-        return output, ExitCodes.SUCCESS
+            raise CompilerError(error, ExitCodes.LINUX_CONNECTION_ERROR)
 
     def execute(self, command, exit_code=ExitCodes.UNKNOWN_LINUX_ERROR):
         "executes the command on the remote"
@@ -197,11 +201,10 @@ class SSH:
         output = stdout.read().decode()
         error = stderr.read().decode()
 
-        if error:
-            Colored.error(error)
-            return '', exit_code
+        if error and exit_code is not None:
+            raise CompilerError(error, exit_code)
 
-        return output, ExitCodes.SUCCESS
+        return output
 
     def close(self):
         "closes ssh connection"
@@ -241,23 +244,15 @@ def start_operation(compiler_config, transfer_config, stdout=sys.stdout):
 
     Colored.file = stdout
 
-    return_code = ExitCodes.SUCCESS
-
     if compiler_config.skip_build:
         Colored.warning("Build skipped.\n")
     else:
-        return_code = start_compile(compiler_config)
-        if return_code != ExitCodes.SUCCESS:
-            return return_code
+        start_compile(compiler_config)
 
     if transfer_config.skip_transfer:
         Colored.warning("Transfer skipped.\n")
     else:
-        return_code = start_transfer(transfer_config)
-        if return_code != ExitCodes.SUCCESS:
-            return return_code
-
-    return return_code
+        start_transfer(transfer_config)
 
 
 def start_compile(compiler_config):
@@ -274,29 +269,26 @@ def start_compile(compiler_config):
             Colored.info("Build started for {0}".format(
                 os.path.basename(path)
             ))
-            _, output = _compile(compile_string, path=path)
+            output = _compile(compile_string, path=path)
             if "BUILD SUCCESSFUL" in output:
                 Colored.info("Build successful for {0}\n".format(
                     os.path.basename(path)
                 ))
             else:
-                Colored.error("Build failed.")
-                return ExitCodes.BUILD_FAILURE
+                raise CompilerError("Build failed.", ExitCodes.BUILD_FAILURE)
 
         # Final link
         Colored.info("Final linking")
         final_link_command = compiler_config.target_type.value + CompileTypes.LINK_ONLY.value
-        _, output = _compile(final_link_command)
+        output = _compile(final_link_command)
     else:
         Colored.info("Build started")
-        _, output = _compile(compile_string)
+        output = _compile(compile_string)
 
-    if "BUILD SUCCESSFUL" in output:
-        Colored.info("Build successful!")
-        return ExitCodes.SUCCESS
+    if "BUILD SUCCESSFUL" not in output:
+        raise CompilerError("Build failed.", ExitCodes.BUILD_FAILURE)
 
-    Colored.error("Build failed.")
-    return ExitCodes.BUILD_FAILURE
+    Colored.info("Build successful!")
 
 
 def _compile(compile_string, *, path=None):
@@ -320,24 +312,22 @@ def _compile(compile_string, *, path=None):
         )
     command = "{0} {1}".format(compiler_real_path, compile_string)
 
-    return_code = None
     output = ""
-    for line, return_code in execute(command, stderr=subprocess.STDOUT):
+    for line, _ in execute(command, stderr=subprocess.STDOUT):
         output += line
         Colored.default(line, end='')
 
     os.chdir(main_path)
 
-    return return_code, output
+    return output
 
 
 def _execute(command, exit_code, devnul=False):
     if devnul:
         command = "{0} > {1}".format(command, os.devnull)
 
-    if os.system(command) == 0:
-        return ExitCodes.SUCCESS
-    return exit_code
+    if os.system(command) != 0 and exit_code is not None:
+        raise CompilerError('', exit_code)
 
 
 def _subprocess(command, exit_code, **kwargs):
@@ -362,11 +352,9 @@ def start_transfer(transfer_config):
     "Copies files to the target if necessary"
 
     if transfer_config.target_machine == TargetMachines.WINDOWS:
-        return _win_copy_file(transfer_config)
+        _win_copy_file(transfer_config)
     if transfer_config.target_machine == TargetMachines.LINUX:
-        return _linux_copy_file(transfer_config)
-
-    return ExitCodes.UNKNOWN
+        _linux_copy_file(transfer_config)
 
 
 def _windows_grant_permissions(transfer_config, access_path):
@@ -382,12 +370,10 @@ def _windows_grant_permissions(transfer_config, access_path):
         pass
 
     if return_code != ExitCodes.SUCCESS.value:
-        Colored.error(
-            "Failed to access the target. Make sure firewall disabled."
+        raise CompilerError(
+            "Failed to access the target. Make sure firewall disabled.",
+            ExitCodes.WINDOWS_PERMISSION_ERROR
         )
-        return ExitCodes.WINDOWS_PERMISSION_ERROR
-
-    return ExitCodes.SUCCESS
 
 
 def _windows_copy_action_handler(transfer_config, access_path):
@@ -416,44 +402,41 @@ def _windows_copy_action_handler(transfer_config, access_path):
     else:
         raise UnknownType(transfer_config.action, CopyActions)
 
-def _win_reboot_handler(transfer_config):
-    if transfer_config.reboot:
-        wmic = WMIC(
-            ip_address=transfer_config.ip_address,
-            username=transfer_config.username,
-            password=transfer_config.password
-        )
-        output, return_code = wmic.execute2(
-            r"C:\Program Files (x86)\Siemens\Automation\CPU "
-            r"150xS\bin\CPU_Control.exe /allowreboot",
-            exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
-        )
-        if return_code != ExitCodes.SUCCESS:
-            Colored.error(output)
-            return return_code
-        output, return_code = wmic.execute2(
-            "shutdown /r /t 0",
-            exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
-        )
-        if return_code != ExitCodes.SUCCESS:
-            Colored.error(output)
-            return return_code
 
-    return ExitCodes.SUCCESS
+def _win_reboot_handler(transfer_config):
+    wmic = WMIC(
+        ip_address=transfer_config.ip_address,
+        username=transfer_config.username,
+        password=transfer_config.password
+    )
+    wmic.execute2(
+        r"C:\Program Files (x86)\Siemens\Automation\CPU "
+        r"150xS\bin\CPU_Control.exe /allowreboot",
+        exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
+    )
+    wmic.execute2(
+        "shutdown /r /t 0",
+        exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
+    )
+
 
 def _win_copy_file(transfer_config):
     drive, folder = transfer_config.destination.split(':')
 
     Colored.info("Trying to access path over shared folder")
-    return_code = _execute(r"dir \\{hostname}\{drive}".format(
-        hostname=transfer_config.ip_address,
-        drive=drive.lower(),
-    ), exit_code=ExitCodes.WINDOWS_PERMISSION_ERROR, devnul=True)
-
-    if return_code == ExitCodes.SUCCESS:
-        use_wmic = False
-    else:
+    try:
+        _execute(
+            r"dir \\{hostname}\{drive}".format(
+                hostname=transfer_config.ip_address,
+                drive=drive.lower(),
+            ),
+            exit_code=ExitCodes.WINDOWS_PERMISSION_ERROR,
+            devnul=True
+        )
+    except CompilerError:
         use_wmic = True
+    else:
+        use_wmic = False
 
     if use_wmic:
         access_path = r"\\{hostname}\{drive}$\{folder}".format(
@@ -469,9 +452,7 @@ def _win_copy_file(transfer_config):
         )
 
     if use_wmic:
-        return_code = _windows_grant_permissions(transfer_config, access_path)
-        if return_code != ExitCodes.SUCCESS:
-            return return_code
+        _windows_grant_permissions(transfer_config, access_path)
 
     Colored.info("Access granted\n")
 
@@ -486,15 +467,40 @@ def _win_copy_file(transfer_config):
         exit_code=ExitCodes.WINDOWS_COPY_ERROR,
     )
     if return_code != ExitCodes.SUCCESS:
-        Colored.error(output)
-        return return_code
+        CompilerError(output, return_code)
+
     Colored.info(output)
 
-    return _win_reboot_handler(transfer_config)
+    if transfer_config.reboot:
+        _win_reboot_handler(transfer_config)
+
+
+def _linux_copy_action_handler(transfer_config, ssh, destination):
+    if (transfer_config.action == CopyActions.BACKUP
+            or transfer_config.action == CopyActions.KEEP_LAST):
+        backup_file = destination + time.strftime("_%Y%m%d_%H%M%S")
+        if transfer_config.action == CopyActions.KEEP_LAST:
+            try:
+                files = ssh.execute("ls {0}*".format(destination))
+            except CompilerError:
+                pass
+            else:
+                filename = destination.split("/")[-1]
+                for file in files.split():
+                    if file.split("/")[-1] != filename:
+                        ssh.execute(
+                            "sudo rm -f {0}".format(file),
+                            exit_code=None
+                        )
+        ssh.execute("sudo mv {0} {1}".format(destination, backup_file))
+    elif transfer_config.action == CopyActions.OVERWRITE:
+        # No need to take any action
+        pass
+    else:
+        raise CompilerError('', ExitCodes.UNKNOWN_LINUX_ERROR)
 
 
 def _linux_copy_file(transfer_config):
-    error_code = ExitCodes.SUCCESS
     basename = os.path.basename(transfer_config.target_file)
     temp_file = "/tmp/" + basename
 
@@ -507,27 +513,9 @@ def _linux_copy_file(transfer_config):
         password=transfer_config.password
     )
 
-    exit_code = ssh.connect()
-    if exit_code != ExitCodes.SUCCESS:
-        return exit_code
+    ssh.connect()
 
-    if (transfer_config.action == CopyActions.BACKUP
-            or transfer_config.action == CopyActions.KEEP_LAST):
-        backup_file = destination + time.strftime("_%Y%m%d_%H%M%S")
-        if transfer_config.action == CopyActions.KEEP_LAST:
-            files, error_code = ssh.execute("ls {0}*".format(destination))
-            if error_code == ExitCodes.SUCCESS:
-                filename = destination.split("/")[-1]
-                for file in files.split():
-                    if file.split("/")[-1] != filename:
-                        ssh.execute("sudo rm -f {0}".format(file))
-        if error_code == ExitCodes.SUCCESS:
-            ssh.execute("sudo mv {0} {1}".format(destination, backup_file))
-    elif transfer_config.action == CopyActions.OVERWRITE:
-        # No need to take any action
-        pass
-    else:
-        return ExitCodes.UNKNOWN_LINUX_ERROR
+    _linux_copy_action_handler(transfer_config, ssh, destination)
 
     sftp = ssh.open_sftp()
 
@@ -542,11 +530,10 @@ def _linux_copy_file(transfer_config):
             "ls -la {0}".format(destination),
             exit_code=ExitCodes.LINUX_COPY_ERROR
         )
-    except (paramiko.SSHException, FileNotFoundError) as error:
+    except (paramiko.SSHException, FileNotFoundError, CompilerError) as error:
         sftp.close()
         ssh.close()
-        Colored.error(error)
-        return ExitCodes.LINUX_COPY_ERROR
+        raise CompilerError(error, ExitCodes.LINUX_COPY_ERROR)
 
     Colored.info("Transfer complated.")
 
@@ -556,13 +543,10 @@ def _linux_copy_file(transfer_config):
     except paramiko.SSHException as error:
         sftp.close()
         ssh.close()
-        Colored.error(error)
-        return ExitCodes.LINUX_REBOOT_ERROR
+        raise CompilerError(error, ExitCodes.LINUX_REBOOT_ERROR)
 
     sftp.close()
     ssh.close()
-
-    return ExitCodes.SUCCESS
 
 
 def _is_linker_editted(linker_file):
