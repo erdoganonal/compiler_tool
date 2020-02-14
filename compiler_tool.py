@@ -108,9 +108,10 @@ def render():
         main_window.grid_columnconfigure(col, weight=1)
 
     configure(main_window)
-    menu.load(use_defaults=True)
+    config = menu.load(use_defaults=True)
 
-    main_window.state("zoomed")
+    if config["menu_config"]["start_full_screen"]:
+        main_window.state("zoomed")
     main_window.mainloop()
 
 

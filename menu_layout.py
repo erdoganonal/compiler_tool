@@ -53,12 +53,14 @@ class Menu(LayoutBase):
         self._transfer_layout = transfer_layout
         self._console_layout = console_layout
         self._git_layout = git_layout
+        self.menu_config = {}
+        self._toggles = {}
 
     @staticmethod
     def _get_first_item(enumaration, attr="name"):
         return getattr(list(enumaration)[0], attr).replace("_", "-")
 
-    def _verify(self, config):
+    def _verify_compiler_config(self, config):
         compiler_config = config["compiler"].copy()
 
         compiler_config["target_type"] = self._name_to_enum(
@@ -75,6 +77,7 @@ class Menu(LayoutBase):
         except UnknownType:
             raise KeyError
 
+    def _verify_transfer_config(self, config):
         transfer_config = config["transfer"].copy()
         transfer_config["target_machine"] = self._name_to_enum(
             transfer_config["target_machine"], TargetMachines)
@@ -88,14 +91,20 @@ class Menu(LayoutBase):
         except UnknownType:
             raise KeyError
 
+    def _verify(self, config):
+        self._verify_compiler_config(config)
+        self._verify_transfer_config(config)
+
     def _load(self, config):
         self._verify(config)
 
-        # set git layout then
+        self.menu_config = config["menu_config"]
+
+        # set git layout first
         for key, value in config["git_config"].items():
             getattr(self._git_layout, key).set(value)
 
-        # set compile layout first
+        # set compile layout then
         for key, value in config["compiler"].items():
             try:
                 getattr(self._compile_layout, key).set(value)
@@ -123,6 +132,9 @@ class Menu(LayoutBase):
 
         self._console_layout.clear_console()
 
+        for function, args in self._toggles.items():
+            function(*args)
+
     def _get_default_config(self):
         target_type = self._get_first_item(TargetTypes)
         compile_type = self._get_first_item(CompileTypes)
@@ -138,6 +150,9 @@ class Menu(LayoutBase):
         action = self._get_first_item(CopyActions)
 
         return {
+            "menu_config": {
+                "start_full_screen": True,
+            },
             "git_config": {
                 "git_path": os.path.dirname(os.path.abspath(sys.argv[0])),
             },
@@ -180,7 +195,7 @@ class Menu(LayoutBase):
                 "Permission Denied",
                 "Permission denied."
             )
-            return
+            return {}
 
         try:
             os.chdir(config["git_config"]["git_path"])
@@ -196,6 +211,8 @@ class Menu(LayoutBase):
                 "Loading Failure",
                 "An error occured while loading configurations"
             )
+
+        return config
 
     def _get_current_config(self):
         config = self._get_default_config()
@@ -225,6 +242,7 @@ class Menu(LayoutBase):
                 transfer_config[key] = attr
 
         return {
+            "menu_config": self.menu_config,
             "git_config": git_config,
             "compiler": compiler_config,
             "transfer": transfer_config
@@ -300,6 +318,22 @@ class Menu(LayoutBase):
         self._console_layout.clear_console()
         self._console_layout.write(message)
 
+    def _toggle_screen_state(self, menu, idx, need_toogle=False):
+        try:
+            full_screen = self.menu_config["start_full_screen"]
+        except KeyError:
+            return
+
+        if need_toogle:
+            self.menu_config["start_full_screen"] = not full_screen
+        else:
+            full_screen = not full_screen
+
+        if full_screen:
+            menu.entryconfig(idx, foreground=COLORS["WHITE"])
+        else:
+            menu.entryconfig(idx, foreground=COLORS["GREEN"])
+
     def render(self, parent, **grid_options):
         "renders the menu frame"
         menu_bar = tk.Frame(parent)
@@ -312,6 +346,7 @@ class Menu(LayoutBase):
 
         self._render_file_menu(file_menu)
         self._render_screen_menu(menu_bar)
+        self._render_config(menu_bar)
         self._render_help_menu(menu_bar)
 
         return menu_bar
@@ -371,6 +406,24 @@ class Menu(LayoutBase):
         )
 
         screen_menu.menu = menu
+
+    def _render_config(self, menu_bar):
+        help_menu = ttk.Menubutton(menu_bar, text="Configurations")
+        help_menu.grid(**self.get_next_position(
+            row=False, column=True, pady=0
+        ))
+
+        menu = tk.Menu(help_menu, tearoff=False, activeborderwidth=0)
+        help_menu["menu"] = menu
+
+        menu.add_command(
+            label="Start full screen", foreground="white",
+            command=lambda: self._toggle_screen_state(menu, 0, True),
+        )
+
+        self._toggles[self._toggle_screen_state] = (menu, 0)
+
+        help_menu.menu = menu
 
     def _render_help_menu(self, menu_bar):
         help_menu = ttk.Menubutton(menu_bar, text="?")
