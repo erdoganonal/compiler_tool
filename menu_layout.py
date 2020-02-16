@@ -199,7 +199,7 @@ class Menu(LayoutBase):
 
         try:
             os.chdir(config["git_config"]["git_path"])
-        except (FileNotFoundError, OSError):
+        except (FileNotFoundError, OSError, KeyError):
             pass
 
         try:

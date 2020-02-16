@@ -322,14 +322,6 @@ def _compile(compile_string, *, path=None):
     return output
 
 
-def _execute(command, exit_code, devnul=False):
-    if devnul:
-        command = "{0} > {1}".format(command, os.devnull)
-
-    if os.system(command) != 0 and exit_code is not None:
-        raise CompilerError('', exit_code)
-
-
 def _subprocess(command, exit_code, **kwargs):
     try:
         output = subprocess.check_output(
@@ -340,12 +332,11 @@ def _subprocess(command, exit_code, **kwargs):
             universal_newlines=True,
             **kwargs
         )
-        return output, ExitCodes.SUCCESS
+        return output
     except subprocess.CalledProcessError as error:
         if exit_code is None:
-            return error.output, ExitCodes.SUCCESS
-        Colored.error(error.output)
-    return '', exit_code
+            return error.output
+        raise CompilerError(error.output, exit_code)
 
 
 def start_transfer(transfer_config):
@@ -383,18 +374,18 @@ def _windows_copy_action_handler(transfer_config, access_path):
             os.path.basename(transfer_config.target_file)
         backup_file = filename + time.strftime("_%Y%m%d_%H%M%S")
 
-        _execute(
+        _subprocess(
             "move {0} {1}".format(filename, backup_file),
-            exit_code=None, devnul=True
+            exit_code=None
         )
 
         if transfer_config.action == CopyActions.KEEP_LAST:
             files = glob.glob("{0}*".format(filename))
             for file_ in files:
                 if backup_file != file_:
-                    _execute(
+                    _subprocess(
                         "del {0}".format(file_),
-                        exit_code=None, devnul=True
+                        exit_code=None
                     )
     elif transfer_config.action == CopyActions.OVERWRITE:
         # No need to take any action
@@ -425,15 +416,15 @@ def _win_copy_file(transfer_config):
 
     Colored.info("Trying to access path over shared folder")
     try:
-        _execute(
+        _subprocess(
             r"dir \\{hostname}\{drive}".format(
                 hostname=transfer_config.ip_address,
                 drive=drive.lower(),
             ),
-            exit_code=ExitCodes.WINDOWS_PERMISSION_ERROR,
-            devnul=True
+            exit_code=ExitCodes.WINDOWS_PERMISSION_ERROR
         )
     except CompilerError:
+        Colored.warning("Could not connect over shared folder.\n")
         use_wmic = True
     else:
         use_wmic = False
@@ -459,15 +450,13 @@ def _win_copy_file(transfer_config):
     _windows_copy_action_handler(transfer_config, access_path)
 
     # /Y option overwrites the file if exist
-    output, return_code = _subprocess(
+    output = _subprocess(
         "xcopy {path} {access_path} /Y".format(
             path=transfer_config.target_file.replace('/', '\\'),
             access_path=access_path,
         ),
         exit_code=ExitCodes.WINDOWS_COPY_ERROR,
     )
-    if return_code != ExitCodes.SUCCESS:
-        CompilerError(output, return_code)
 
     Colored.info(output)
 

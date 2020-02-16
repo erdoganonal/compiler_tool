@@ -45,6 +45,7 @@ class Output:
         self._config()
         self._is_paused = False
         self._cache = ""
+        self._stream = None
 
     def pause(self):
         "Pauses the streaming"
@@ -60,6 +61,25 @@ class Output:
     def is_paused(self):
         "returns True if stream of console has been paused"
         return self._is_paused
+
+    @property
+    def stream(self):
+        "The file where the console output will be written"
+        return self._stream
+
+    @stream.setter
+    def stream(self, value):
+        "the setter of the file path"
+        if value is None:
+            # streaming disable
+            try:
+                self._stream.close()
+            except AttributeError:
+                pass
+            self._stream = None
+            return
+
+        self._stream = open(value, 'w')
 
     @staticmethod
     def _no_color(text):
@@ -101,6 +121,10 @@ class Output:
         if self.is_paused:
             self._cache += message
             return
+
+        if self.stream is not None:
+            self.stream.write(self._no_color(message))
+            self.stream.flush()
 
         self.text_widget.config(state=tk.NORMAL)
 
