@@ -262,10 +262,8 @@ def start_compile(compiler_config):
 
     if (not compiler_config.compile_type == CompileTypes.LINK_ONLY
             and compiler_config.partial_compile):
-        # Remove the dublicate ones
-        paths = set(compiler_config.partial_compile)
 
-        for path in paths:
+        for path in compiler_config.partial_compile:
             Colored.info("Build started for {0}".format(
                 os.path.basename(path)
             ))
