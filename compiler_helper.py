@@ -90,6 +90,7 @@ class ExitCodes(enum.Enum):
     WINDOWS_PERMISSION_ERROR = enum.auto()
     WINDOWS_COPY_ERROR = enum.auto()
     WINDOWS_REBOOT_ERROR = enum.auto()
+    WINDOWS_CONTROL_TOOL_ERROR = enum.auto()
     UNKNOWN_LINUX_ERROR = enum.auto()
     LINUX_CONNECTION_ERROR = enum.auto()
     LINUX_COPY_ERROR = enum.auto()

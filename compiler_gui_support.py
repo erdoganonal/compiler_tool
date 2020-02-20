@@ -401,7 +401,7 @@ def _win_reboot_handler(transfer_config):
     wmic.execute2(
         r"C:\Program Files (x86)\Siemens\Automation\CPU "
         r"150xS\bin\CPU_Control.exe /allowreboot",
-        exit_code=ExitCodes.WINDOWS_REBOOT_ERROR
+        exit_code=ExitCodes.WINDOWS_CONTROL_TOOL_ERROR
     )
     wmic.execute2(
         "shutdown /r /t 0",
