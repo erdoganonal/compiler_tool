@@ -76,11 +76,6 @@ class Fore:
 DEFAULT_USERNAME = "pt1"
 DEFAULT_PASSWORD = "pt1"
 
-CONFIG_FILE = os.path.join(
-    os.path.expanduser("~"),
-    ".compiler_config"
-)
-
 PAD = 25
 INNER = int(PAD * 1.5)
 

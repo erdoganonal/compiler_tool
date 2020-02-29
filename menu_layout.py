@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import pyperclip
 
+from compiler_config import CONFIGURATIONS, CONFIG_FILE
 from compiler_helper import TargetTypes, \
     CompileTypes, LINKER_DFT_EXPAND_SIZE, \
     AutoBoolType, TargetMachines, EXECUTABLE_FILE_PATH, \
@@ -14,7 +15,7 @@ from compiler_helper import TargetTypes, \
     CompilerConfig, TransferConfig, UnknownType
 from layout_base import LayoutBase, \
     DEFAULT_USERNAME, DEFAULT_PASSWORD, \
-    CONFIG_FILE, merge_line_by_line, Fore, COLORS
+    merge_line_by_line, Fore, COLORS
 from compiler_layout import COMPILER_HELP, Cstr
 from transfer_layout import TRANSFER_HELP
 
@@ -242,6 +243,7 @@ class Menu(LayoutBase):
                 transfer_config[key] = attr
 
         return {
+            "general_config": CONFIGURATIONS.get_all(),
             "menu_config": self.menu_config,
             "git_config": git_config,
             "compiler": compiler_config,
