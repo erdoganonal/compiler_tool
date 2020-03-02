@@ -14,7 +14,10 @@ from compiler_gui_support import start_operation, CompilerError
 from layout_base import PAD, Fore
 
 COMPILER_PROCESS_NAME = "compiler_process"
-
+TEMPORY_FILE = os.path.join(
+    tempfile.gettempdir(),
+    ".compiler_tool.tmp"
+)
 
 if CONFIGURATIONS.get('enable_multiprocessing', False):
     from multiprocessing import Process, active_children
@@ -54,9 +57,9 @@ class ButtonLayout:
         return None
 
     @staticmethod
-    def _start_operation(compiler_config, transfer_config, filename):
+    def _start_operation(compiler_config, transfer_config):
         # pylint: disable=broad-except
-        file = open(filename, 'w')
+        file = open(TEMPORY_FILE, 'w')
         try:
             start_operation(
                 compiler_config, transfer_config,
@@ -133,28 +136,27 @@ class ButtonLayout:
 
         self._console_layout.clear_console()
 
-        filename = tempfile.NamedTemporaryFile().name
-        with open(filename, 'w'):
+        with open(TEMPORY_FILE, 'w'):
             pass
 
         if CONFIGURATIONS.get('enable_multiprocessing', False):
             Process(
                 target=self._start_operation,
-                args=(compiler_config, transfer_config, filename,),
+                args=(compiler_config, transfer_config,),
                 name=COMPILER_PROCESS_NAME,
                 daemon=True
             ).start()
         else:
             threading.Thread(
                 target=self._start_operation,
-                args=(compiler_config, transfer_config, filename,),
+                args=(compiler_config, transfer_config,),
                 name=COMPILER_PROCESS_NAME,
                 daemon=True
             ).start()
 
         threading.Thread(
             target=self._process_file_watcher,
-            args=(filename,),
+            args=(TEMPORY_FILE,),
             daemon=True
         ).start()
 
@@ -193,3 +195,9 @@ class ButtonLayout:
             self._cancel_button.grid(row=0, column=1, pady=PAD, padx=PAD)
 
         return button_frame
+
+    def __del__(self):
+        try:
+            os.unlink(TEMPORY_FILE)
+        except (OSError, FileNotFoundError, PermissionError):
+            pass

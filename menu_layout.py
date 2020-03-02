@@ -254,7 +254,7 @@ class Menu(LayoutBase):
         "saves the config to the file"
         config = self._get_current_config()
         try:
-            config = json.dumps(config)
+            config = json.dumps(config, indent=4)
         except json.JSONDecodeError:
             if not no_messagebox:
                 tk.messagebox.showerror(
@@ -285,7 +285,7 @@ class Menu(LayoutBase):
             )
         )
 
-        config = json.dumps(self._get_current_config())
+        config = json.dumps(self._get_current_config(), indent=4)
 
         with open(path, 'w') as file:
             file.write(config)

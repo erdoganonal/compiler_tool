@@ -341,8 +341,10 @@ def start_transfer(transfer_config):
     "Copies files to the target if necessary"
 
     if transfer_config.target_machine == TargetMachines.WINDOWS:
+        transfer_config.destination += r"\CPU.elf*"
         _win_copy_file(transfer_config)
     if transfer_config.target_machine == TargetMachines.LINUX:
+        transfer_config.destination += "/CPU.elf"
         _linux_copy_file(transfer_config)
 
 

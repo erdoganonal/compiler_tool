@@ -44,8 +44,9 @@ class Output:
         self.stderr = stderr
         self._config()
         self._is_paused = False
-        self._cache = ""
+        self._cache = ''
         self._stream = None
+        self._color = ''
 
     def pause(self):
         "Pauses the streaming"
@@ -91,7 +92,7 @@ class Output:
             self.text_widget.tag_config(name, **options)
 
     def _write(self, message):
-        color = ''
+        color = self._color
         regex = re.compile(r"\x1b\[[0-9]{0,2}")
 
         for char in message:
@@ -114,6 +115,8 @@ class Output:
                     continue
 
                 self.text_widget.insert(tk.END, char, Fore.RESET)
+
+        self._color = color
 
     def write(self, message):
         """The class must have write function to catch the
