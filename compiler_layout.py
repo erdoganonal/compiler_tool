@@ -26,7 +26,8 @@ from compiler_helper import EXECUTABLE_FILE_PATH, \
     AutoBoolType, CPUTypes, \
     CompilerConfig
 from layout_base import LayoutBase, \
-    to_comma_string, ENTRY_CONFIG, configure
+    to_comma_string, ENTRY_CONFIG, configure, \
+    TextWidgetWrapper, COLORS
 
 COMPILER_HELP = __doc__.strip().format(
     target_types=to_comma_string(TargetTypes),
@@ -353,17 +354,75 @@ class CompileLayout(LayoutBase):
 
             window.destroy()
 
+        def configure_tags(text_widget, comment_tag, valid_tag, invalid_tag):
+            text_widget.tag_delete(comment_tag)
+            text_widget.tag_delete(valid_tag)
+            text_widget.tag_delete(invalid_tag)
+
+            text_widget.tag_config(
+                comment_tag,
+                foreground=COLORS["GREEN"]
+            )
+            text_widget.tag_config(
+                valid_tag,
+                foreground=COLORS["CYAN"]
+            )
+            text_widget.tag_config(
+                invalid_tag,
+                foreground=COLORS["RED"]
+            )
+
+        def on_key_release(text_widget: TextWidgetWrapper):
+            lines = text_widget.get(1.0, tk.END).splitlines()
+
+            for idx, line in enumerate(lines):
+                comment_tag = f"comment{idx}"
+                valid_tag = f"valid{idx}"
+                invalid_tag = f"invalid{idx}"
+
+                configure_tags(
+                    text_widget, comment_tag,
+                    valid_tag, invalid_tag
+                )
+
+                if line.strip().startswith('#'):
+                    text_widget.tag_add(
+                        comment_tag,
+                        f"{idx+1}.0",
+                        f"{idx+1}.{tk.END}"
+                    )
+                elif os.path.isfile(os.path.join(line, "build.xml")):
+                    text_widget.tag_add(
+                        valid_tag,
+                        f"{idx+1}.0",
+                        f"{idx+1}.{tk.END}"
+                    )
+                else:
+                    text_widget.tag_add(
+                        invalid_tag,
+                        f"{idx+1}.0",
+                        f"{idx+1}.{tk.END}"
+                    )
+
         window = tk.Tk()
         window.title("Partial Compile")
         window.resizable(False, False)
 
         ttk.Label(
             window,
-            text="Add component paths. Use newline for another component"
+            text="Add component paths. "
+            "Use newline for another component. "
+            "Lines start with '#' will be ignored."
         ).grid(row=0, column=0)
         text = tk.Text(window, foreground="white")
         text.grid(row=1, column=0)
+
+        for key in ("<KeyRelease>", "<Enter>",):
+            text.bind(key, lambda event: on_key_release(
+                TextWidgetWrapper(text)
+            ))
         text.insert(tk.END, '\n'.join(self.partial_compile_text))
+        text.config(undo=True)
 
         ttk.Button(window, text="Done", command=lambda: _safe_close(text)).grid(
             row=2, column=0

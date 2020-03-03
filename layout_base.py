@@ -300,3 +300,57 @@ class LayoutBase:
         style["width"] = int(width) + 2  # add some offset
 
         return style
+
+
+class TextWidgetWrapper:
+    "A wrapper for text widget to insert colored text"
+    _COLOR_DICT = {
+        Fore.BLACK: {"foreground": COLORS["BLACK"]},
+        Fore.RED: {"foreground": COLORS["RED"]},
+        Fore.GREEN: {"foreground": COLORS["GREEN"]},
+        Fore.YELLOW: {"foreground": COLORS["YELLOW"]},
+        Fore.BLUE: {"foreground": COLORS["BLUE"]},
+        Fore.MAGENTA: {"foreground": COLORS["MAGENTA"]},
+        Fore.CYAN: {"foreground": COLORS["CYAN"]},
+        Fore.WHITE: {"foreground": COLORS["WHITE"]},
+        Fore.RESET: {"foreground": COLORS["WHITE"]},
+
+        Fore.BOLD_BLACK: {"foreground": COLORS["BLACK"], "font": "bold"},
+        Fore.BOLD_RED: {"foreground": COLORS["RED"], "font": "bold"},
+        Fore.BOLD_GREEN: {"foreground": COLORS["GREEN"], "font": "bold"},
+        Fore.BOLD_YELLOW: {"foreground": COLORS["YELLOW"], "font": "bold"},
+        Fore.BOLD_BLUE: {"foreground": COLORS["BLUE"], "font": "bold"},
+        Fore.BOLD_MAGENTA: {"foreground": COLORS["MAGENTA"], "font": "bold"},
+        Fore.BOLD_CYAN: {"foreground": COLORS["CYAN"], "font": "bold"},
+        Fore.BOLD_WHITE: {"foreground": COLORS["WHITE"], "font": "bold"},
+
+        Fore.TITLE: {
+            "foreground": COLORS["TITLE"],
+            "font": (None, 18, "bold"), "justify": "center"},
+        Fore.INFO_WHITE: {
+            "foreground": COLORS["INFO_WHITE"],
+            "font": (None, 14, "bold"), "justify": "center"},
+        Fore.INFO_CYAN: {
+            "foreground": COLORS["INFO_CYAN"],
+            "font": (None, 14, "bold"), "justify": "center"},
+    }
+
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+        self.config()
+
+    def __getattr__(self, value):
+        try:
+            return self.__getattribute__(value)
+        except AttributeError:
+            return getattr(self.text_widget, value)
+
+    @staticmethod
+    def _no_color(text):
+        ansi_escape = re.compile(r'\x1B[\(\[][0-?]*[ -/]*[@-~]')
+        return ansi_escape.sub('', text)
+
+    def config(self):
+        "configure tags"
+        for name, options in self._COLOR_DICT.items():
+            self.text_widget.tag_config(name, **options)

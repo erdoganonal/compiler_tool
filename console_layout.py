@@ -3,46 +3,15 @@ import re
 
 import tkinter as tk
 
-from layout_base import Fore, COLORS
+from layout_base import TextWidgetWrapper, Fore
 
 
-class Output:
+class Output(TextWidgetWrapper):
     "Redirect to output the console which created by tkinter Text"
-    _COLOR_DICT = {
-        Fore.BLACK: {"foreground": COLORS["BLACK"]},
-        Fore.RED: {"foreground": COLORS["RED"]},
-        Fore.GREEN: {"foreground": COLORS["GREEN"]},
-        Fore.YELLOW: {"foreground": COLORS["YELLOW"]},
-        Fore.BLUE: {"foreground": COLORS["BLUE"]},
-        Fore.MAGENTA: {"foreground": COLORS["MAGENTA"]},
-        Fore.CYAN: {"foreground": COLORS["CYAN"]},
-        Fore.WHITE: {"foreground": COLORS["WHITE"]},
-        Fore.RESET: {"foreground": COLORS["WHITE"]},
-
-        Fore.BOLD_BLACK: {"foreground": COLORS["BLACK"], "font": "bold"},
-        Fore.BOLD_RED: {"foreground": COLORS["RED"], "font": "bold"},
-        Fore.BOLD_GREEN: {"foreground": COLORS["GREEN"], "font": "bold"},
-        Fore.BOLD_YELLOW: {"foreground": COLORS["YELLOW"], "font": "bold"},
-        Fore.BOLD_BLUE: {"foreground": COLORS["BLUE"], "font": "bold"},
-        Fore.BOLD_MAGENTA: {"foreground": COLORS["MAGENTA"], "font": "bold"},
-        Fore.BOLD_CYAN: {"foreground": COLORS["CYAN"], "font": "bold"},
-        Fore.BOLD_WHITE: {"foreground": COLORS["WHITE"], "font": "bold"},
-
-        Fore.TITLE: {
-            "foreground": COLORS["TITLE"],
-            "font": (None, 18, "bold"), "justify": "center"},
-        Fore.INFO_WHITE: {
-            "foreground": COLORS["INFO_WHITE"],
-            "font": (None, 14, "bold"), "justify": "center"},
-        Fore.INFO_CYAN: {
-            "foreground": COLORS["INFO_CYAN"],
-            "font": (None, 14, "bold"), "justify": "center"},
-    }
 
     def __init__(self, text_widget, stderr=False):
-        self.text_widget = text_widget
+        super().__init__(text_widget)
         self.stderr = stderr
-        self._config()
         self._is_paused = False
         self._cache = ''
         self._stream = None
@@ -81,15 +50,6 @@ class Output:
             return
 
         self._stream = open(value, 'w')
-
-    @staticmethod
-    def _no_color(text):
-        ansi_escape = re.compile(r'\x1B[\(\[][0-?]*[ -/]*[@-~]')
-        return ansi_escape.sub('', text)
-
-    def _config(self):
-        for name, options in self._COLOR_DICT.items():
-            self.text_widget.tag_config(name, **options)
 
     def _write(self, message):
         color = self._color
