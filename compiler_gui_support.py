@@ -245,12 +245,12 @@ def start_operation(compiler_config, transfer_config, stdout=sys.stdout):
     Colored.file = stdout
 
     if compiler_config.skip_build:
-        Colored.warning("Build skipped.\n")
+        Colored.warning("\nBuild skipped.\n")
     else:
         start_compile(compiler_config)
 
     if transfer_config.skip_transfer:
-        Colored.warning("Transfer skipped.\n")
+        Colored.warning("\nTransfer skipped.\n")
     else:
         start_transfer(transfer_config)
 
@@ -275,10 +275,17 @@ def start_compile(compiler_config):
             else:
                 raise CompilerError("Build failed.", ExitCodes.BUILD_FAILURE)
 
-        # Final link
-        Colored.info("Final linking")
-        final_link_command = compiler_config.target_type.value + CompileTypes.LINK_ONLY.value
-        output = _compile(final_link_command)
+        if compiler_config.compile_type in (
+                CompileTypes.UNOPTIMIZED_AND_LINK,
+                CompileTypes.OPTIMIZED_AND_LINK,
+                CompileTypes.LINK_ONLY
+        ):
+            # Final link
+            Colored.info("Final linking")
+            final_link_command = compiler_config.target_type.value + CompileTypes.LINK_ONLY.value
+            output = _compile(final_link_command)
+        else:
+            Colored.warning("\nFinal link skipped.\n")
     else:
         Colored.info("Build started")
         output = _compile(compile_string)
@@ -630,7 +637,10 @@ def get_compile_string(compiler_config):
     if compiler_config.parallel_compile:
         compile_param += " -Dbuild.parallel=true"
 
-    if compiler_config.compile_type == CompileTypes.UNOPTIMIZED:
+    if compiler_config.compile_type in (
+            CompileTypes.UNOPTIMIZED,
+            CompileTypes.UNOPTIMIZED_AND_LINK
+    ):
         # If unoptimized options selected,
         # some modiffication might be needed
         do_unoptimized_modifications(compiler_config)

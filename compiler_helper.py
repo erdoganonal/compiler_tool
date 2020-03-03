@@ -180,8 +180,10 @@ class TargetTypes(enum.Enum):
 
 class CompileTypes(enum.Enum):
     "Type of the possible compile options"
+    UNOPTIMIZED_AND_LINK = " -Dbuild.unoptimized=true "
     UNOPTIMIZED = " -Dbuild.unoptimized=true"
     OPTIMIZED = ""
+    OPTIMIZED_AND_LINK = " "
     LINK_ONLY = " -Dfinallinkonly=true"
 
 
