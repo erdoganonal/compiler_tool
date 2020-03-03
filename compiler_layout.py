@@ -35,16 +35,6 @@ COMPILER_HELP = __doc__.strip().format(
 )
 
 
-class Cstr(str):
-    "A custom string class for ignoring lines which startswith '#'"
-    def splitlines(self, *args, **kwargs):
-        lines = []
-        for line in super().splitlines(*args, **kwargs):
-            if not line.startswith("#"):
-                lines.append(line)
-        return lines
-
-
 class CompileLayout(LayoutBase):
     "The Compiler Frame"
     # pylint: disable=too-many-instance-attributes
@@ -58,7 +48,7 @@ class CompileLayout(LayoutBase):
         self.edit_linker = None
         self.expand_size = None
         self.partial_compile = None
-        self.partial_compile_text = Cstr("")
+        self.partial_compile_text = []
         self.output = None
         self._transfer_layout = transfer_layout
         self.parent = None
@@ -106,8 +96,8 @@ class CompileLayout(LayoutBase):
 
         non_empty_path_count = 0
 
-        for path in self.partial_compile_text.splitlines():
-            if not path:
+        for path in self.partial_compile_text:
+            if not path or path.strip().startswith('#'):
                 continue
 
             build_xml_path = os.path.join(path, "build.xml")
@@ -164,8 +154,9 @@ class CompileLayout(LayoutBase):
                 command_line += "--parallel "
             if self.partial_compile.get():
                 command_line += "--partial-compile "
-                for path in set(self.partial_compile_text.splitlines()):
-                    command_line += "{0} ".format(path)
+                for path in set(self.partial_compile_text):
+                    if not path.strip().startswith('#'):
+                        command_line += "{0} ".format(path)
 
             command_line += "--edit-linker {0} ".format(self.edit_linker.get())
             if self.edit_linker.get() in (AutoBoolType.ALWAYS,):
@@ -179,6 +170,12 @@ class CompileLayout(LayoutBase):
         if not self.validate():
             return None
 
+        partial_compile = []
+        for path in self.partial_compile_text:
+            if not path or path.strip().startswith('#'):
+                continue
+            partial_compile.append(path)
+
         return CompilerConfig(
             target_type=self._name_to_enum(
                 self.target_type.get(), TargetTypes),
@@ -186,8 +183,7 @@ class CompileLayout(LayoutBase):
             compile_type=self._name_to_enum(
                 self.compile_type.get(), CompileTypes),
             parallel_compile=self.parallel_compile.get(),
-            partial_compile=self.partial_compile_text.splitlines(
-            ) if self.partial_compile.get() else None,
+            partial_compile=partial_compile if self.partial_compile.get() else None,
             edit_linker=self._name_to_enum(
                 self.edit_linker.get(), AutoBoolType),
             expand_size=self.expand_size.get(),
@@ -353,7 +349,7 @@ class CompileLayout(LayoutBase):
     def _render_partial_compile_entry(self):
         def _safe_close(text_widget):
             text = text_widget.get(1.0, tk.END).strip('\n')
-            self.partial_compile_text = Cstr(text + '\n')
+            self.partial_compile_text = text.splitlines()
 
             window.destroy()
 
@@ -367,7 +363,7 @@ class CompileLayout(LayoutBase):
         ).grid(row=0, column=0)
         text = tk.Text(window, foreground="white")
         text.grid(row=1, column=0)
-        text.insert(tk.END, self.partial_compile_text)
+        text.insert(tk.END, '\n'.join(self.partial_compile_text))
 
         ttk.Button(window, text="Done", command=lambda: _safe_close(text)).grid(
             row=2, column=0
