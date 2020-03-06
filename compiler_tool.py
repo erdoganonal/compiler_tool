@@ -30,6 +30,14 @@ from button_layout import ButtonLayout
 from console_layout import ConsoleLayout
 
 
+def handle_destroy(root, *windows):
+    "Closes given windows and the main window"
+    for window in windows:
+        window.destroy()
+
+    root.destroy()
+
+
 def render():
     "starts from here"
 
@@ -41,7 +49,6 @@ def render():
     options_frame = tk.Frame(main_window)
     options_frame.grid_rowconfigure(0, weight=1)
     options_frame.grid_columnconfigure(0, weight=1)
-
 
     # get transfer layout
     transfer_layout = TransferLayout()
@@ -112,6 +119,14 @@ def render():
 
     if config["menu_config"]["start_full_screen"]:
         main_window.state("zoomed")
+
+    main_window.protocol(
+        'WM_DELETE_WINDOW',
+        lambda: handle_destroy(
+            main_window,
+            compile_layout,
+        )
+    )
     main_window.mainloop()
 
 

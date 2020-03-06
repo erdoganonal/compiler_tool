@@ -25,6 +25,7 @@ COLORS = {
     "TITLE": "#F54D63",
     "INFO_WHITE": "#A8BDC7",
     "INFO_CYAN": "cyan",
+    "ORANGE": "#FF7F00",
 }
 
 
@@ -53,6 +54,8 @@ class Fore:
     TITLE = '\x1b[50m'
     INFO_WHITE = '\x1b[51m'
     INFO_CYAN = '\x1b[52m'
+
+    ORANGE = '\x1b[60m'
 
     @classmethod
     def to_dict(cls):
@@ -322,17 +325,25 @@ class TextWidgetWrapper:
         Fore.BOLD_BLUE: {"foreground": COLORS["BLUE"], "font": "bold"},
         Fore.BOLD_MAGENTA: {"foreground": COLORS["MAGENTA"], "font": "bold"},
         Fore.BOLD_CYAN: {"foreground": COLORS["CYAN"], "font": "bold"},
-        Fore.BOLD_WHITE: {"foreground": COLORS["WHITE"], "font": "bold"},
+        Fore.BOLD_WHITE: {"foreground": COLORS["WHITE"], "font": (None, 10, "bold")},
 
         Fore.TITLE: {
             "foreground": COLORS["TITLE"],
-            "font": (None, 18, "bold"), "justify": "center"},
+            "font": (None, 18, "bold"),
+            "justify": "center"
+        },
         Fore.INFO_WHITE: {
             "foreground": COLORS["INFO_WHITE"],
-            "font": (None, 14, "bold"), "justify": "center"},
+            "font": (None, 14, "bold"),
+            "justify": "center"
+        },
         Fore.INFO_CYAN: {
             "foreground": COLORS["INFO_CYAN"],
-            "font": (None, 14, "bold"), "justify": "center"},
+            "font": (None, 14, "bold"),
+            "justify": "center"
+        },
+
+        Fore.ORANGE: {"foreground": COLORS["ORANGE"]},
     }
 
     def __init__(self, text_widget):

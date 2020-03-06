@@ -51,6 +51,20 @@ class Output(TextWidgetWrapper):
 
         self._stream = open(value, 'w')
 
+    def _add_color(self, message):
+        compile_header_regex = re.compile(r"Compiling fileset \".*\" in \".*\" for \".*\"")
+        no_color_stripped_message = self._no_color(message).strip()
+        if no_color_stripped_message.startswith("###"):
+            message = message.replace(Fore.RESET, '')
+            message = f"{Fore.ORANGE}{message}{Fore.RESET}"
+        elif no_color_stripped_message.startswith("compiling"):
+            message = message.replace(Fore.RESET, '')
+            message = f"{Fore.GREEN}{message}{Fore.RESET}"
+        elif compile_header_regex.match(no_color_stripped_message):
+            message = message.replace(Fore.RESET, '')
+            message = f"{Fore.BOLD_WHITE}{message}{Fore.RESET}"
+        return message
+
     def _write(self, message):
         color = self._color
         regex = re.compile(r"\x1b\[[0-9]{0,2}")
@@ -81,6 +95,8 @@ class Output(TextWidgetWrapper):
     def write(self, message):
         """The class must have write function to catch the
         output which comes through."""
+        message = self._add_color(message)
+
         if self.is_paused:
             self._cache += message
             return

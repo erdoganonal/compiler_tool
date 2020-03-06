@@ -181,11 +181,24 @@ class TargetTypes(enum.Enum):
 class CompileTypes(enum.Enum):
     "Type of the possible compile options"
     UNOPTIMIZED_AND_LINK = " -Dbuild.unoptimized=true "
+    OPTIMIZED_AND_LINK = " "
     UNOPTIMIZED = " -Dbuild.unoptimized=true"
     OPTIMIZED = ""
-    OPTIMIZED_AND_LINK = " "
     LINK_ONLY = " -Dfinallinkonly=true"
 
+    @classmethod
+    def need_final_link(cls, enumeration):
+        "returns True if final link needed False otherwise"
+        if isinstance(enumeration, cls):
+            return "LINK" in enumeration.name
+        return "LINK" in enumeration
+
+    @classmethod
+    def is_unoptimized(cls, enumeration):
+        "returns True if compile type is unoptimized False otherwise"
+        if isinstance(enumeration, cls):
+            return "UNOPTIMIZED" in enumeration.name
+        return "UNOPTIMIZED" in enumeration
 
 class TargetMachines(enum.Enum):
     "Type of the possible environments"

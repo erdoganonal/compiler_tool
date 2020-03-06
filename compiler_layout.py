@@ -53,6 +53,7 @@ class CompileLayout(LayoutBase):
         self.output = None
         self._transfer_layout = transfer_layout
         self.parent = None
+        self._window = None
 
     def _target_type_trace(self):
         # self.target_type.get()
@@ -123,6 +124,18 @@ class CompileLayout(LayoutBase):
         "Checks the validity of entire inputs"
         if self.skip_build.get():
             return True
+
+        compile_type = self._name_to_enum(self.compile_type.get(), CompileTypes)
+        if not CompileTypes.need_final_link(compile_type):
+            if not self._transfer_layout.skip_transfer.get():
+                # If transfer selected but final link skipped, prompt
+                result = messagebox.askyesno(
+                    "Warning",
+                    "Do you want to transfer file without final link?",
+                    icon=messagebox.WARNING
+                )
+                if not result:
+                    return False
 
         if not self._text_validator(self.output):
             messagebox.showerror(
@@ -347,12 +360,34 @@ class CompileLayout(LayoutBase):
         self._partial_compile_trace(button)
         self._bind[self._partial_compile_trace] = [button]
 
+    def destroy(self):
+        "closes open windows"
+        if self._window is not None:
+            self._window.destroy()
+
+        self._window = None
+
     def _render_partial_compile_entry(self):
-        def _safe_close(text_widget):
+        def _save_and_close(text_widget):
             text = text_widget.get(1.0, tk.END).strip('\n')
             self.partial_compile_text = text.splitlines()
 
-            window.destroy()
+            self.destroy()
+
+        def _safe_close(text_widget):
+            old_text = '\n'.join(self.partial_compile_text)
+            current_text = text_widget.get(1.0, tk.END)
+            if (old_text + '\n') != current_text:
+                result = messagebox.askyesno(
+                    "Discard Configurations",
+                    "Configurations are not saved. "
+                    "Are you sure to discard?",
+                    parent=self._window
+                )
+                if not result:
+                    return
+
+            self.destroy()
 
         def configure_tags(text_widget, comment_tag, valid_tag, invalid_tag):
             text_widget.tag_delete(comment_tag)
@@ -361,11 +396,11 @@ class CompileLayout(LayoutBase):
 
             text_widget.tag_config(
                 comment_tag,
-                foreground=COLORS["GREEN"]
+                foreground=COLORS["YELLOW"]
             )
             text_widget.tag_config(
                 valid_tag,
-                foreground=COLORS["CYAN"]
+                foreground=COLORS["GREEN"]
             )
             text_widget.tag_config(
                 invalid_tag,
@@ -403,18 +438,24 @@ class CompileLayout(LayoutBase):
                         f"{idx+1}.0",
                         f"{idx+1}.{tk.END}"
                     )
+        if self._window is not None:
+            messagebox.showwarning(
+                "Already opened",
+                "The window you requested is already opened"
+            )
+            return
 
-        window = tk.Tk()
-        window.title("Partial Compile")
-        window.resizable(False, False)
+        self._window = tk.Tk()
+        self._window.title("Partial Compile")
+        self._window.resizable(False, False)
 
         ttk.Label(
-            window,
+            self._window,
             text="Add component paths. "
             "Use newline for another component. "
             "Lines start with '#' will be ignored."
         ).grid(row=0, column=0)
-        text = tk.Text(window, foreground="white")
+        text = tk.Text(self._window, foreground="white")
         text.grid(row=1, column=0)
 
         for key in ("<KeyRelease>", "<Enter>",):
@@ -424,9 +465,14 @@ class CompileLayout(LayoutBase):
         text.insert(tk.END, '\n'.join(self.partial_compile_text))
         text.config(undo=True)
 
-        ttk.Button(window, text="Done", command=lambda: _safe_close(text)).grid(
+        ttk.Button(self._window, text="Done", command=lambda: _save_and_close(text)).grid(
             row=2, column=0
         )
 
-        configure(window)
-        window.mainloop()
+        configure(self._window)
+        self._window.protocol(
+            'WM_DELETE_WINDOW',
+            lambda: _safe_close(text)
+        )
+
+        self._window.mainloop()

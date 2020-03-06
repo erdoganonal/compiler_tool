@@ -275,11 +275,7 @@ def start_compile(compiler_config):
             else:
                 raise CompilerError("Build failed.", ExitCodes.BUILD_FAILURE)
 
-        if compiler_config.compile_type in (
-                CompileTypes.UNOPTIMIZED_AND_LINK,
-                CompileTypes.OPTIMIZED_AND_LINK,
-                CompileTypes.LINK_ONLY
-        ):
+        if  CompileTypes.need_final_link(compiler_config.compile_type):
             # Final link
             Colored.info("Final linking")
             final_link_command = compiler_config.target_type.value + CompileTypes.LINK_ONLY.value
@@ -637,10 +633,7 @@ def get_compile_string(compiler_config):
     if compiler_config.parallel_compile:
         compile_param += " -Dbuild.parallel=true"
 
-    if compiler_config.compile_type in (
-            CompileTypes.UNOPTIMIZED,
-            CompileTypes.UNOPTIMIZED_AND_LINK
-    ):
+    if  CompileTypes.is_unoptimized(compiler_config.compile_type):
         # If unoptimized options selected,
         # some modiffication might be needed
         do_unoptimized_modifications(compiler_config)
