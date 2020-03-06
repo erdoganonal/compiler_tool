@@ -15,10 +15,10 @@ WINAC_GIT = "WinAC_Plus"
 class GitConfigLayout(LayoutBase):
     "The GitConfig Frame"
 
-    def __init__(self, transfer_layout):
+    def __init__(self, context):
         super().__init__()
         self.git_path = None
-        self._transfer_layout = transfer_layout
+        self._context = context
 
     @staticmethod
     def is_valid_git_path(path):
@@ -54,8 +54,8 @@ class GitConfigLayout(LayoutBase):
             os.chdir(variable.get())
         else:
             os.chdir(os.getenv("tmp"))
-        self._transfer_layout.target_file.set(
-            self._transfer_layout.target_file.get()
+        self._context.transfer_layout.target_file.set(
+            self._context.transfer_layout.target_file.get()
         )
         return is_valid_folder
 

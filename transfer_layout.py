@@ -35,9 +35,10 @@ class TransferLayout(LayoutBase):
     "The Transfer Frame"
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self):
+    def __init__(self, context):
         super().__init__()
         self.skip_transfer = None
+        self.context = context
         self.target_machine = None  # Linux, Windows
         self.cpu_type = None  # Standard, failsafe...
         self.ip_address = None

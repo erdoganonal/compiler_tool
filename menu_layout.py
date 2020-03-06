@@ -48,12 +48,9 @@ EXIT_CODES = '\n'.join(
 class Menu(LayoutBase):
     "The Menu Frame"
 
-    def __init__(self, compile_layout, transfer_layout, console_layout, git_layout):
+    def __init__(self, context):
         super().__init__()
-        self._compile_layout = compile_layout
-        self._transfer_layout = transfer_layout
-        self._console_layout = console_layout
-        self._git_layout = git_layout
+        self._context = context
         self.global_config = {}
         self._toggles = {}
 
@@ -103,35 +100,35 @@ class Menu(LayoutBase):
 
         # set git layout first
         for key, value in config["git_config"].items():
-            getattr(self._git_layout, key).set(value)
+            getattr(self._context.git_layout, key).set(value)
 
         # set compile layout then
         for key, value in config["compiler"].items():
             try:
-                getattr(self._compile_layout, key).set(value)
+                getattr(self._context.compile_layout, key).set(value)
             except AttributeError:
-                setattr(self._compile_layout, key, value)
+                setattr(self._context.compile_layout, key, value)
 
         # set transfer layout then
         for key, value in config["transfer"].items():
-            getattr(self._transfer_layout, key).set(value)
+            getattr(self._context.transfer_layout, key).set(value)
 
         self._toggle()
 
     def _toggle(self):
         # finally, call toggles
-        self._compile_layout.toggle_children_states(
-            self._compile_layout.parent,
-            self._compile_layout.skip_build,
+        self._context.compile_layout.toggle_children_states(
+            self._context.compile_layout.parent,
+            self._context.compile_layout.skip_build,
         )
 
-        self._transfer_layout.toggle_children_states(
-            self._transfer_layout.parent,
-            self._transfer_layout.skip_transfer,
+        self._context.transfer_layout.toggle_children_states(
+            self._context.transfer_layout.parent,
+            self._context.transfer_layout.skip_transfer,
             True
         )
 
-        self._console_layout.clear_console()
+        self._context.console_layout.clear_console()
 
         for function, args in self._toggles.items():
             function(*args)
@@ -147,7 +144,7 @@ class Menu(LayoutBase):
         target_file = os.path.join(EXECUTABLE_FILE_PATH.format(
             self._get_enum_value_from_name(target_type, TargetTypes)
         ), self._get_enum_value_from_name(
-            self._transfer_layout.cpu_type.get(), CPUTypes))
+            self._context.transfer_layout.cpu_type.get(), CPUTypes))
         action = self._get_first_item(CopyActions)
 
         return {
@@ -221,7 +218,7 @@ class Menu(LayoutBase):
 
         git_config = {}
         for key in config["git_config"]:
-            attr = getattr(self._git_layout, key)
+            attr = getattr(self._context.git_layout, key)
             try:
                 git_config[key] = attr.get()
             except AttributeError:
@@ -229,7 +226,7 @@ class Menu(LayoutBase):
 
         compiler_config = {}
         for key in config["compiler"]:
-            attr = getattr(self._compile_layout, key)
+            attr = getattr(self._context.compile_layout, key)
             try:
                 compiler_config[key] = attr.get()
             except AttributeError:
@@ -237,7 +234,7 @@ class Menu(LayoutBase):
 
         transfer_config = {}
         for key in config["transfer"]:
-            attr = getattr(self._transfer_layout, key)
+            attr = getattr(self._context.transfer_layout, key)
             try:
                 transfer_config[key] = attr.get()
             except AttributeError:
@@ -297,18 +294,18 @@ class Menu(LayoutBase):
 
     def _copy_output(self):
         # set clipboard data
-        console_text = self._console_layout.text_widget.get(1.0, tk.END)
+        console_text = self._context.console_layout.text_widget.get(1.0, tk.END)
         pyperclip.copy(console_text)
 
     def _pause_screen(self, menu, index1, index2):
         menu.entryconfig(index1, foreground=COLORS["YELLOW"])
         menu.entryconfig(index2, foreground=COLORS["WHITE"])
-        self._console_layout.file.pause()
+        self._context.console_layout.file.pause()
 
     def _resume_screen(self, menu, index1, index2):
         menu.entryconfig(index1, foreground=COLORS["GREEN"])
         menu.entryconfig(index2, foreground=COLORS["WHITE"])
-        self._console_layout.file.resume()
+        self._context.console_layout.file.resume()
 
     def _reset(self):
         "resets the configurations to the defaults"
@@ -317,8 +314,8 @@ class Menu(LayoutBase):
         # self._save(no_messagebox=True)
 
     def _to_console(self, message):
-        self._console_layout.clear_console()
-        self._console_layout.write(message)
+        self._context.console_layout.clear_console()
+        self._context.console_layout.write(message)
 
     def _toggle_screen_state(self, menu, idx, need_toogle=False):
         try:
@@ -397,7 +394,7 @@ class Menu(LayoutBase):
 
         menu.add_command(
             label="Clear", foreground="white",
-            command=self._console_layout.clear_console,
+            command=self._context.console_layout.clear_console,
         )
 
         menu.add_command(

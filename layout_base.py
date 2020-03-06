@@ -181,6 +181,33 @@ def configure(widget):
         configure(child)
 
 
+class CompilerToolContext:
+    "A context that includes entire layouts"
+
+    def __init__(self):
+        self.compile_layout = None
+        self.console_layout = None
+        self.button_layout = None
+        self.git_layout = None
+        self.menu_layout = None
+        self.transfer_layout = None
+
+    def register(self, **kwargs):
+        "registers given arguments"
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def validate(self):
+        "returns True if instance valid"
+        return all(self.__dict__.values())
+
+    def __bool__(self):
+        return self.validate()
+
+
+CONTEXT = CompilerToolContext()
+
+
 class LayoutBase:
     "A base layout, includes common functions"
 

@@ -22,7 +22,7 @@ import tkinter as tk
 
 from tendo import singleton
 
-from layout_base import PAD, configure
+from layout_base import PAD, configure, CONTEXT
 from menu_layout import Menu
 from git_layout import GitConfigLayout
 from compiler_layout import CompileLayout
@@ -45,6 +45,7 @@ def main():
     finally:
         del lock
 
+
 def handle_destroy(root, *windows):
     "Closes given windows and the main window"
     for window in windows:
@@ -66,32 +67,41 @@ def render():
     options_frame.grid_columnconfigure(0, weight=1)
 
     # get transfer layout
-    transfer_layout = TransferLayout()
+    transfer_layout = TransferLayout(CONTEXT)
 
     # get git layout
-    git_layout = GitConfigLayout(transfer_layout)
+    git_layout = GitConfigLayout(CONTEXT)
 
     # get compiler layout
-    compile_layout = CompileLayout(transfer_layout)
+    compile_layout = CompileLayout(CONTEXT)
 
     # get debug configurations layout
     # debug_config_layout = DebugConfigLayout(transfer_layout)
 
     # get console
-    console_layout = ConsoleLayout()
+    console_layout = ConsoleLayout(CONTEXT)
 
     # get start button layout
-    start_button = ButtonLayout(
-        git_layout=git_layout,
+    start_button = ButtonLayout(CONTEXT)
+
+    menu_layout = Menu(CONTEXT)
+
+    CONTEXT.register(
         compile_layout=compile_layout,
         transfer_layout=transfer_layout,
-        console_layout=console_layout
+        button_layout=start_button,
+        git_layout=git_layout,
+        menu_layout=menu_layout,
+        console_layout=console_layout,
     )
-
-    menu = Menu(compile_layout, transfer_layout, console_layout, git_layout)
+    if not CONTEXT:
+        for key, value in CONTEXT.__dict__.items():
+            if not value:
+                print(f"{key} is not registered")
+        return
 
     # Grid all
-    menu.render(main_window, row=0, column=0, sticky=tk.NW)
+    menu_layout.render(main_window, row=0, column=0, sticky=tk.NW)
 
     git_layout.render(
         main_window, row=1,
@@ -130,7 +140,7 @@ def render():
         main_window.grid_columnconfigure(col, weight=1)
 
     configure(main_window)
-    config = menu.load(use_defaults=True)
+    config = menu_layout.load(use_defaults=True)
 
     if config["global_config"]["start_full_screen"]:
         main_window.state("zoomed")

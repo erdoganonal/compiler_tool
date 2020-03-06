@@ -122,9 +122,10 @@ class Output(TextWidgetWrapper):
 class ConsoleLayout:
     "The Console Frame"
 
-    def __init__(self):
+    def __init__(self, context):
         self.text_widget = None
         self._output = None
+        self._context = context
 
     def clear_console(self):
         "clears the console"

@@ -40,7 +40,7 @@ class CompileLayout(LayoutBase):
     "The Compiler Frame"
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, transfer_layout):
+    def __init__(self, context):
         super().__init__()
         self.target_type = None  # OC2, IPC
         self.skip_build = None
@@ -51,14 +51,14 @@ class CompileLayout(LayoutBase):
         self.partial_compile = None
         self.partial_compile_text = []
         self.output = None
-        self._transfer_layout = transfer_layout
+        self._context = context
         self.parent = None
         self._window = None
 
     def _target_type_trace(self):
         # self.target_type.get()
         try:
-            cpu_type = self._transfer_layout.cpu_type.get()
+            cpu_type = self._context.transfer_layout.cpu_type.get()
             target_type = self.target_type.get()
         except AttributeError:
             # Not rendered yet
@@ -70,7 +70,7 @@ class CompileLayout(LayoutBase):
             )),
             self._get_enum_value_from_name(cpu_type, CPUTypes)
         )
-        self._transfer_layout.target_file.set(path)
+        self._context.transfer_layout.target_file.set(path)
 
     def _compile_type_trace(self):
         pass
@@ -127,7 +127,7 @@ class CompileLayout(LayoutBase):
 
         compile_type = self._name_to_enum(self.compile_type.get(), CompileTypes)
         if not CompileTypes.need_final_link(compile_type):
-            if not self._transfer_layout.skip_transfer.get():
+            if not self._context.transfer_layout.skip_transfer.get():
                 # If transfer selected but final link skipped, prompt
                 result = messagebox.askyesno(
                     "Warning",

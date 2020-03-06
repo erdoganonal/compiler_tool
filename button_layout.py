@@ -26,11 +26,8 @@ if CONFIGURATIONS.get('enable_multiprocessing', False):
 class ButtonLayout:
     "The Button Frame"
 
-    def __init__(self, *, git_layout, compile_layout, transfer_layout, console_layout):
-        self._git_layout = git_layout
-        self._compile_layout = compile_layout
-        self._transfer_layout = transfer_layout
-        self._console_layout = console_layout
+    def __init__(self, context):
+        self._context = context
         self._start_button = None
         self._cancel_button = None
         self._main_dir = os.getcwd()
@@ -98,7 +95,7 @@ class ButtonLayout:
             while True:
                 line = file.readline()
                 if line:
-                    self._console_layout.write(line)
+                    self._context.console_layout.write(line)
                 else:
                     time.sleep(0.5)
                 process = self._get_process()
@@ -112,29 +109,29 @@ class ButtonLayout:
         self._cancel_operation()
 
     def _start_operation_in_bg(self):
-        compiler_config = self._compile_layout.get_current_config()
+        compiler_config = self._context.compile_layout.get_current_config()
         if compiler_config is None:
             return
 
-        transfer_config = self._transfer_layout.get_current_config()
+        transfer_config = self._context.transfer_layout.get_current_config()
         if transfer_config is None:
             return
 
-        git_config = self._git_layout.get_current_config()
+        git_config = self._context.git_layout.get_current_config()
         if git_config is None:
             return
 
         self._start_button.configure(state=tk.DISABLED)
         self._cancel_button.configure(state=tk.NORMAL)
 
-        output_file = self._compile_layout.output.get()
+        output_file = self._context.compile_layout.output.get()
         if not os.path.isabs(output_file):
             output_file = os.path.abspath(os.path.join(
                 os.path.dirname(sys.argv[0]),
                 output_file
             ))
 
-        self._console_layout.clear_console()
+        self._context.console_layout.clear_console()
 
         with open(TEMPORY_FILE, 'w'):
             pass
@@ -169,7 +166,7 @@ class ButtonLayout:
         self._cancel_button.configure(state=tk.DISABLED)
 
         if is_user:
-            self._console_layout.write(
+            self._context.console_layout.write(
                 "{0}\nOperation canceled by user!\n".format(Fore.RED)
             )
 
