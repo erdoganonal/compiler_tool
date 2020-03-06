@@ -20,6 +20,8 @@
 """
 import tkinter as tk
 
+from tendo import singleton
+
 from layout_base import PAD, configure
 from menu_layout import Menu
 from git_layout import GitConfigLayout
@@ -30,6 +32,19 @@ from button_layout import ButtonLayout
 from console_layout import ConsoleLayout
 
 
+def main():
+    "starts from here"
+    # Lock
+    try:
+        lock = singleton.SingleInstance()
+    except singleton.SingleInstanceException:
+        return
+
+    try:
+        render()
+    finally:
+        del lock
+
 def handle_destroy(root, *windows):
     "Closes given windows and the main window"
     for window in windows:
@@ -39,7 +54,7 @@ def handle_destroy(root, *windows):
 
 
 def render():
-    "starts from here"
+    "renders the main window"
 
     # Create a main window
     main_window = tk.Tk()
@@ -117,7 +132,7 @@ def render():
     configure(main_window)
     config = menu.load(use_defaults=True)
 
-    if config["menu_config"]["start_full_screen"]:
+    if config["global_config"]["start_full_screen"]:
         main_window.state("zoomed")
 
     main_window.protocol(
@@ -131,4 +146,4 @@ def render():
 
 
 if __name__ == "__main__":
-    render()
+    main()

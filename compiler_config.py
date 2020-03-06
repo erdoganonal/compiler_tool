@@ -12,7 +12,7 @@ class _Configurations:
     def __init__(self):
         try:
             with open(CONFIG_FILE) as config_file:
-                self._config = json.loads(config_file.read())["general_config"]
+                self._config = json.loads(config_file.read())["global_config"]
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             self._config = {}
 

@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import pyperclip
 
-from compiler_config import CONFIGURATIONS, CONFIG_FILE
+from compiler_config import CONFIG_FILE
 from compiler_helper import TargetTypes, \
     CompileTypes, LINKER_DFT_EXPAND_SIZE, \
     AutoBoolType, TargetMachines, EXECUTABLE_FILE_PATH, \
@@ -54,7 +54,7 @@ class Menu(LayoutBase):
         self._transfer_layout = transfer_layout
         self._console_layout = console_layout
         self._git_layout = git_layout
-        self.menu_config = {}
+        self.global_config = {}
         self._toggles = {}
 
     @staticmethod
@@ -99,7 +99,7 @@ class Menu(LayoutBase):
     def _load(self, config):
         self._verify(config)
 
-        self.menu_config = config["menu_config"]
+        self.global_config = config["global_config"]
 
         # set git layout first
         for key, value in config["git_config"].items():
@@ -151,7 +151,8 @@ class Menu(LayoutBase):
         action = self._get_first_item(CopyActions)
 
         return {
-            "menu_config": {
+            "global_config": {
+                "enable_multiprocessing": False,
                 "start_full_screen": True,
             },
             "git_config": {
@@ -243,8 +244,7 @@ class Menu(LayoutBase):
                 transfer_config[key] = attr
 
         return {
-            "general_config": CONFIGURATIONS.get_all(),
-            "menu_config": self.menu_config,
+            "global_config": self.global_config,
             "git_config": git_config,
             "compiler": compiler_config,
             "transfer": transfer_config
@@ -322,12 +322,12 @@ class Menu(LayoutBase):
 
     def _toggle_screen_state(self, menu, idx, need_toogle=False):
         try:
-            full_screen = self.menu_config["start_full_screen"]
+            full_screen = self.global_config["start_full_screen"]
         except KeyError:
             return
 
         if need_toogle:
-            self.menu_config["start_full_screen"] = not full_screen
+            self.global_config["start_full_screen"] = not full_screen
         else:
             full_screen = not full_screen
 
