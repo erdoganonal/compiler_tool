@@ -17,7 +17,8 @@ from compiler_helper import CompileTypes, \
     ExitCodes, CopyActions, UnknownType, \
     CONFIG_FILE_PATH, LINKER_FILE_PATH, \
     CompilerConfig, TransferConfig, \
-    COMPILER_PATH, COMPILER_NAME, PARTIAL_COMPILE_POSTFIX
+    COMPILER_PATH, COMPILER_NAME, \
+    PARTIAL_COMPILE_POSTFIX, CPUTypes
 
 
 class Colored:
@@ -340,14 +341,19 @@ def _subprocess(command, exit_code, **kwargs):
         raise CompilerError(error.output, exit_code)
 
 
-def start_transfer(transfer_config):
+def start_transfer(transfer_config: TransferConfig):
     "Copies files to the target if necessary"
 
+    filename = os.path.basename(transfer_config.target_file)
+    if any(filename == item.value for item in CPUTypes):
+        # Strip xxx part from CPU_xxx.elf
+        filename = "CPU.elf"
+
     if transfer_config.target_machine == TargetMachines.WINDOWS:
-        transfer_config.destination += r"\CPU.elf*"
+        transfer_config.destination += f"\\{filename}*"
         _win_copy_file(transfer_config)
     if transfer_config.target_machine == TargetMachines.LINUX:
-        transfer_config.destination += "/CPU.elf"
+        transfer_config.destination += f"/{filename}"
         _linux_copy_file(transfer_config)
 
 

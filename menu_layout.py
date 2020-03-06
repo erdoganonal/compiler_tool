@@ -336,6 +336,14 @@ class Menu(LayoutBase):
         else:
             menu.entryconfig(idx, foreground=COLORS["GREEN"])
 
+        if need_toogle:
+            messagebox.showwarning(
+                "Configuration not saved yet!",
+                "In order to change screen mode "
+                "you need to save configurations. "
+                "This mode will efect after restart"
+            )
+
     def render(self, parent, **grid_options):
         "renders the menu frame"
         menu_bar = tk.Frame(parent)
