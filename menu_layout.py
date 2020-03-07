@@ -294,7 +294,8 @@ class Menu(LayoutBase):
 
     def _copy_output(self):
         # set clipboard data
-        console_text = self._context.console_layout.text_widget.get(1.0, tk.END)
+        console_text = self._context.console_layout.text_widget.get(
+            1.0, tk.END)
         pyperclip.copy(console_text)
 
     def _pause_screen(self, menu, index1, index2):
@@ -317,18 +318,18 @@ class Menu(LayoutBase):
         self._context.console_layout.clear_console()
         self._context.console_layout.write(message)
 
-    def _toggle_screen_state(self, menu, idx, need_toogle=False):
+    def _toggle_state(self, menu, idx, config_name, need_toogle=False):
         try:
-            full_screen = self.global_config["start_full_screen"]
+            state = self.global_config[config_name]
         except KeyError:
             return
 
         if need_toogle:
-            self.global_config["start_full_screen"] = not full_screen
+            self.global_config[config_name] = not state
         else:
-            full_screen = not full_screen
+            state = not state
 
-        if full_screen:
+        if state:
             menu.entryconfig(idx, foreground=COLORS["WHITE"])
         else:
             menu.entryconfig(idx, foreground=COLORS["GREEN"])
@@ -340,6 +341,20 @@ class Menu(LayoutBase):
                 "you need to save configurations. "
                 "This mode will efect after restart"
             )
+
+    def _toggle_screen_state(self, menu, idx, need_toogle=False):
+        self._toggle_state(
+            menu=menu, idx=idx,
+            config_name="start_full_screen",
+            need_toogle=need_toogle
+        )
+
+    def _toggle_multiprocessing_state(self, menu, idx, need_toogle=False):
+        self._toggle_state(
+            menu=menu, idx=idx,
+            config_name="enable_multiprocessing",
+            need_toogle=need_toogle
+        )
 
     def render(self, parent, **grid_options):
         "renders the menu frame"
@@ -427,8 +442,18 @@ class Menu(LayoutBase):
             label="Start full screen", foreground="white",
             command=lambda: self._toggle_screen_state(menu, 0, True),
         )
-
         self._toggles[self._toggle_screen_state] = (menu, 0)
+
+        # If python called from python file
+        # then render multiprocessing menu
+        if sys.argv[0].endswith(".py"):
+            menu.add_command(
+                label="Enable multiprocessing", foreground="white",
+                command=lambda: self._toggle_multiprocessing_state(
+                    menu, 1, True
+                ),
+            )
+            self._toggles[self._toggle_multiprocessing_state] = (menu, 1)
 
         help_menu.menu = menu
 
