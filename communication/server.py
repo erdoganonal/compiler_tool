@@ -11,10 +11,10 @@ import threading
 
 from typing import Union
 
-from communication.communication_base import to_file, DEFAULT_PORT, SHUTDOWN_SERVER_CMD
-from communication.executor import WindowsConsole, IOWrapper
-from communication.cert.server_crt import SERVER_KEY, SERVER_CERT
-from communication.cert.client_crt import CLIENT_CERT
+from communication_base import to_file, DEFAULT_PORT, SHUTDOWN_SERVER_CMD
+from executor import WindowsConsole, IOWrapper
+from cert.server_crt import SERVER_KEY, SERVER_CERT
+from cert.client_crt import CLIENT_CERT
 
 
 BYTE_SPLIT_REGEX = re.compile(rb'.')
