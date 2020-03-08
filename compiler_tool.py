@@ -22,14 +22,14 @@ import sys
 import tkinter as tk
 import multiprocessing
 
-from layout_base import PAD, configure, CONTEXT, ICON_PATH
-from menu_layout import Menu
-from git_layout import GitConfigLayout
-from compiler_layout import CompileLayout
-from transfer_layout import TransferLayout
-# from debug_config_layout import DebugConfigLayout
-from button_layout import ButtonLayout
-from console_layout import ConsoleLayout
+from layouts.layout_base import PAD, configure, CONTEXT, ICON_PATH
+from layouts.menu_layout import Menu
+from layouts.git_layout import GitConfigLayout
+from layouts.compiler_layout import CompileLayout
+from layouts.transfer_layout import TransferLayout
+# from layouts.debug_config_layout import DebugConfigLayout
+from layouts.button_layout import ButtonLayout
+from layouts.console_layout import ConsoleLayout
 
 
 def main():

@@ -13,11 +13,11 @@ from compiler_helper import TargetTypes, \
     AutoBoolType, TargetMachines, EXECUTABLE_FILE_PATH, \
     CopyActions, CPUTypes, ExitCodes, \
     CompilerConfig, TransferConfig, UnknownType
-from layout_base import LayoutBase, \
+from layouts.layout_base import LayoutBase, \
     DEFAULT_USERNAME, DEFAULT_PASSWORD, \
     merge_line_by_line, Fore, COLORS
-from compiler_layout import COMPILER_HELP
-from transfer_layout import TRANSFER_HELP
+from layouts.compiler_layout import COMPILER_HELP
+from layouts.transfer_layout import TRANSFER_HELP
 
 HELP = merge_line_by_line(
     COMPILER_HELP,

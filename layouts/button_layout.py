@@ -11,7 +11,7 @@ from tkinter import ttk
 
 from compiler_helper import ExitCodes
 from compiler_gui_support import start_operation, CompilerError
-from layout_base import PAD, Fore
+from layouts.layout_base import PAD, Fore
 
 COMPILER_PROCESS_NAME = "compiler_process"
 TEMPORY_FILE = os.path.join(

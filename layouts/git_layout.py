@@ -5,7 +5,7 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from layout_base import LayoutBase, \
+from layouts.layout_base import LayoutBase, \
     ENTRY_CONFIG, INNER, PAD
 
 PADDING = int(PAD/2)

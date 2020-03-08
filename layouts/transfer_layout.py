@@ -21,7 +21,7 @@ from tkinter import ttk, messagebox
 
 from compiler_helper import TransferConfig, \
     TargetMachines, CopyActions, CPUTypes
-from layout_base import LayoutBase, \
+from layouts.layout_base import LayoutBase, \
     to_comma_string, ENTRY_CONFIG, PAD
 
 TRANSFER_HELP = __doc__.strip().format(

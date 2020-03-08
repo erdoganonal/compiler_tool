@@ -25,7 +25,7 @@ from compiler_helper import EXECUTABLE_FILE_PATH, \
     TargetTypes, CompileTypes, \
     AutoBoolType, CPUTypes, \
     CompilerConfig
-from layout_base import LayoutBase, \
+from layouts.layout_base import LayoutBase, \
     to_comma_string, ENTRY_CONFIG, configure, \
     TextWidgetWrapper, COLORS, ICON_PATH
 

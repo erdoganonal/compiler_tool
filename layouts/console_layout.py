@@ -3,7 +3,7 @@ import re
 
 import tkinter as tk
 
-from layout_base import TextWidgetWrapper, Fore
+from layouts.layout_base import TextWidgetWrapper, Fore
 
 
 class Output(TextWidgetWrapper):
