@@ -18,11 +18,11 @@
 #                                <console>                              #
 #-----------------------------------------------------------------------#
 """
+import sys
 import tkinter as tk
+import multiprocessing
 
-from tendo import singleton
-
-from layout_base import PAD, configure, CONTEXT
+from layout_base import PAD, configure, CONTEXT, ICON_PATH
 from menu_layout import Menu
 from git_layout import GitConfigLayout
 from compiler_layout import CompileLayout
@@ -34,16 +34,9 @@ from console_layout import ConsoleLayout
 
 def main():
     "starts from here"
-    # Lock
-    try:
-        lock = singleton.SingleInstance()
-    except singleton.SingleInstanceException:
-        return
+    multiprocessing.freeze_support()
 
-    try:
-        render()
-    finally:
-        del lock
+    render()
 
 
 def handle_destroy(root, *windows):
@@ -152,8 +145,19 @@ def render():
             compile_layout,
         )
     )
+    main_window.iconbitmap(ICON_PATH)
     main_window.mainloop()
 
 
 if __name__ == "__main__":
-    main()
+    # pylint:disable=broad-except
+    try:
+        main()
+    except Exception as error:
+        if hasattr(sys, "_MEIPASS"):
+            # If file created by pyinstaller and
+            # in case of no console, write the error
+            # to the file
+            with open("compiler_tool_crash.log", "w") as log:
+                log.write(str(error))
+        raise

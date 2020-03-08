@@ -27,7 +27,7 @@ from compiler_helper import EXECUTABLE_FILE_PATH, \
     CompilerConfig
 from layout_base import LayoutBase, \
     to_comma_string, ENTRY_CONFIG, configure, \
-    TextWidgetWrapper, COLORS
+    TextWidgetWrapper, COLORS, ICON_PATH
 
 COMPILER_HELP = __doc__.strip().format(
     target_types=to_comma_string(TargetTypes),
@@ -475,4 +475,5 @@ class CompileLayout(LayoutBase):
             lambda: _safe_close(text)
         )
 
+        self._window.iconbitmap(ICON_PATH)
         self._window.mainloop()

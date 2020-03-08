@@ -4,11 +4,11 @@ import os
 import time
 import threading
 import tempfile
+from multiprocessing import Process, active_children
 
 import tkinter as tk
 from tkinter import ttk
 
-from compiler_config import CONFIGURATIONS
 from compiler_helper import ExitCodes
 from compiler_gui_support import start_operation, CompilerError
 from layout_base import PAD, Fore
@@ -18,9 +18,6 @@ TEMPORY_FILE = os.path.join(
     tempfile.gettempdir(),
     ".compiler_tool.tmp"
 )
-
-if CONFIGURATIONS.get('enable_multiprocessing', False):
-    from multiprocessing import Process, active_children
 
 
 class ButtonLayout:
@@ -42,11 +39,7 @@ class ButtonLayout:
 
     @staticmethod
     def _get_process():
-        if CONFIGURATIONS.get('enable_multiprocessing', False):
-            processes = active_children()
-        else:
-            processes = [thread for thread in threading.enumerate()
-                         if thread.is_alive()]
+        processes = active_children()
 
         for process in processes:
             if process.name == COMPILER_PROCESS_NAME:
@@ -136,20 +129,12 @@ class ButtonLayout:
         with open(TEMPORY_FILE, 'w'):
             pass
 
-        if CONFIGURATIONS.get('enable_multiprocessing', False):
-            Process(
-                target=self._start_operation,
-                args=(compiler_config, transfer_config,),
-                name=COMPILER_PROCESS_NAME,
-                daemon=True
-            ).start()
-        else:
-            threading.Thread(
-                target=self._start_operation,
-                args=(compiler_config, transfer_config,),
-                name=COMPILER_PROCESS_NAME,
-                daemon=True
-            ).start()
+        Process(
+            target=self._start_operation,
+            args=(compiler_config, transfer_config,),
+            name=COMPILER_PROCESS_NAME,
+            daemon=True
+        ).start()
 
         threading.Thread(
             target=self._process_file_watcher,
@@ -188,8 +173,7 @@ class ButtonLayout:
             command=lambda: self._cancel_operation(is_user=True),
             state=tk.DISABLED
         )
-        if CONFIGURATIONS.get('enable_multiprocessing', False):
-            self._cancel_button.grid(row=0, column=1, pady=PAD, padx=PAD)
+        self._cancel_button.grid(row=0, column=1, pady=PAD, padx=PAD)
 
         return button_frame
 

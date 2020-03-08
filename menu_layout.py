@@ -149,7 +149,6 @@ class Menu(LayoutBase):
 
         return {
             "global_config": {
-                "enable_multiprocessing": False,
                 "start_full_screen": True,
             },
             "git_config": {
@@ -349,13 +348,6 @@ class Menu(LayoutBase):
             need_toogle=need_toogle
         )
 
-    def _toggle_multiprocessing_state(self, menu, idx, need_toogle=False):
-        self._toggle_state(
-            menu=menu, idx=idx,
-            config_name="enable_multiprocessing",
-            need_toogle=need_toogle
-        )
-
     def render(self, parent, **grid_options):
         "renders the menu frame"
         menu_bar = tk.Frame(parent)
@@ -443,17 +435,6 @@ class Menu(LayoutBase):
             command=lambda: self._toggle_screen_state(menu, 0, True),
         )
         self._toggles[self._toggle_screen_state] = (menu, 0)
-
-        # If python called from python file
-        # then render multiprocessing menu
-        if sys.argv[0].endswith(".py"):
-            menu.add_command(
-                label="Enable multiprocessing", foreground="white",
-                command=lambda: self._toggle_multiprocessing_state(
-                    menu, 1, True
-                ),
-            )
-            self._toggles[self._toggle_multiprocessing_state] = (menu, 1)
 
         help_menu.menu = menu
 

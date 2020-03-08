@@ -1,11 +1,13 @@
-rmdir build /s /q
-rmdir dist /s /q
-del build_out.txt
-del compiler_tool.spec
+echo OFF
+set icon_path=%cd%\compiler.ico
 
-pyinstaller.exe  -w -F compiler_tool.py
-REM pyinstaller.exe --onefile compiler_tool.py
+cls
+IF "%1%" == "--with-console" (
+    pyinstaller.exe --clean --onefile --icon "%icon_path%" --add-data "%icon_path%";"." compiler_tool.py
+) ELSE (
+    pyinstaller.exe --clean --noconsole --onefile --icon "%icon_path%" --add-data "%icon_path%";"." compiler_tool.py
+)
 
-rmdir build /s /q
-del build_out.txt
-del compiler_tool.spec
+rmdir build /s /q > nul 2>&1
+del build_out.txt > nul 2>&1
+del compiler_tool.spec > nul 2>&1

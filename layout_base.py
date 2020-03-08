@@ -1,4 +1,5 @@
 "A base layout, includes common functions"
+import sys
 import os
 import re
 import enum
@@ -7,6 +8,13 @@ import tkinter as tk
 from tkinter import ttk
 
 from compiler_helper import UnknownType
+
+
+MAIN_PATH = getattr(sys, "_MEIPASS", os.path.dirname(sys.argv[0]))
+ICON_PATH = os.path.abspath(os.path.join(
+    MAIN_PATH,
+    "compiler.ico"
+))
 
 
 CSI = '\033['
