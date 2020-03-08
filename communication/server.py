@@ -11,10 +11,10 @@ import threading
 
 from typing import Union
 
-from communication_base import to_file, DEFAULT_PORT, SHUTDOWN_SERVER_CMD
-from executor import WindowsConsole, IOWrapper
-from cert.server_crt import SERVER_KEY, SERVER_CERT
-from cert.client_crt import CLIENT_CERT
+from communication.communication_base import to_file, DEFAULT_PORT, SHUTDOWN_SERVER_CMD
+from communication.executor import WindowsConsole, IOWrapper
+from communication.cert.server_crt import SERVER_KEY, SERVER_CERT
+from communication.cert.client_crt import CLIENT_CERT
 
 
 BYTE_SPLIT_REGEX = re.compile(rb'.')
@@ -146,22 +146,26 @@ class Server:
         threading.Thread(
             target=self._communicate,
             args=(console, connected_client,),
+            name=f"{__file__}::self._communicate",
             daemon=True
         ).start()
 
         threading.Thread(
             target=self._read_data_from_console,
             args=(console, connected_client,),
+            name=f"{__file__}::self._read_data_from_console",
             daemon=True
         ).start()
         threading.Thread(
             target=self._write_data_to_client,
             args=(console, connected_client,),
+            name=f"{__file__}::self._write_data_to_client",
             daemon=True
         ).start()
         threading.Thread(
             target=self._read_data_from_client,
             args=(console, connected_client,),
+            name=f"{__file__}::self._read_data_from_client",
             daemon=True
         ).start()
 

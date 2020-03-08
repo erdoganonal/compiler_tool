@@ -1,154 +1,25 @@
 "The Console Layout"
 import re
-import time
-import threading
 
 import tkinter as tk
 
-from layouts.layout_base import TextWidgetWrapper, Fore
+from layouts.layout_base import Fore, Output, get_rid_of_coloring
 
-
-class Output(TextWidgetWrapper):
-    "Redirect to output the console which created by tkinter Text"
-
-    def __init__(self, text_widget, stderr=False):
-        super().__init__(text_widget)
-        self.stderr = stderr
-        self._is_paused = False
-        self._cache = ''
-        self._stream = None
-        self._color = ''
-        self._ready = True
-
-    def pause(self):
-        "Pauses the streaming"
-        self._is_paused = True
-
-    def resume(self):
-        "Starts the steaming"
-        self._is_paused = False
-        self.write(self._cache)
-        self._cache = ""
-
-    def _write_after_ready(self, message, timeout):
-        current_time = time.time()
-        spin_time = 5
-        while time.time() - current_time <= timeout:
-            if not self._ready:
-                spin_time = 5
-            elif spin_time == 0:
-                break
-            else:
-                spin_time -= 1
-            time.sleep(.5)
-        self.write(message)
-
-    def write_after_ready(self, message, timeout=10):
-        """Waits until message queue empty and writes
-        right after. If timeout occurs, writes.
-        """
-        threading.Thread(
-            target=self._write_after_ready,
-            args=(message, timeout,),
-            daemon=True
-        ).start()
-
-    @property
-    def is_paused(self):
-        "returns True if stream of console has been paused"
-        return self._is_paused
-
-    @property
-    def stream(self):
-        "The file where the console output will be written"
-        return self._stream
-
-    @stream.setter
-    def stream(self, value):
-        "the setter of the file path"
-        if value is None:
-            # streaming disable
-            try:
-                self._stream.close()
-            except AttributeError:
-                pass
-            self._stream = None
-            return
-
-        self._stream = open(value, 'w')
-
-    def _add_color(self, message):
-        compile_header_regex = re.compile(
-            r"Compiling fileset \".*\" in \".*\" for \".*\""
-        )
-        no_color_stripped_message = self._no_color(message).strip()
-        if no_color_stripped_message.startswith("###"):
-            message = message.replace(Fore.RESET, '')
-            message = f"{Fore.ORANGE}{message}{Fore.RESET}"
-        elif no_color_stripped_message.startswith("compiling"):
-            message = message.replace(Fore.RESET, '')
-            message = f"{Fore.GREEN}{message}{Fore.RESET}"
-        elif compile_header_regex.match(no_color_stripped_message):
-            message = message.replace(Fore.RESET, '')
-            message = f"{Fore.BOLD_WHITE}{message}{Fore.RESET}"
-        return message
-
-    def _write(self, message):
-        color = self._color
-        regex = re.compile(r"\x1b\[[0-9]{0,2}")
-
-        for char in message:
-            # Entire colors starts with '\x1b'
-            if char == '\x1b':
-                color = '\x1b'
-            # Then continue with '['
-            elif color == '\x1b' and char == '[':
-                color += char
-            elif regex.match(color) and not color.endswith('m'):
-                if char == 'm':
-                    color += char
-                else:
-                    color += char
-            else:
-                if color == Fore.RESET:
-                    color = ''
-                elif color in self._COLOR_DICT:
-                    self.text_widget.insert(tk.END, char, color)
-                    continue
-
-                self.text_widget.insert(tk.END, char, Fore.RESET)
-
-        self._color = color
-
-    def write(self, message):
-        """The class must have write function to catch the
-        output which comes through."""
-        self._ready = False
-        message = self._add_color(message)
-
-        if self.is_paused:
-            self._cache += message
-            return
-
-        if self.stream is not None:
-            self.stream.write(self._no_color(message))
-            self.stream.flush()
-
-        self.text_widget.config(state=tk.NORMAL)
-
-        if self.stderr:
-            self.text_widget.insert(tk.END, message, Fore.RED)
-        else:
-            self._write(message)
-
-        self.text_widget.see(tk.END)
-        self.text_widget.config(state=tk.DISABLED)
-
-        self._ready = True
-
-    def flush(self):
-        "No need to cache the output. Prints immediately."
-
+def _add_color(message):
+    compile_header_regex = re.compile(
+        r"Compiling fileset \".*\" in \".*\" for \".*\""
+    )
+    no_color_stripped_message = get_rid_of_coloring(message).strip()
+    if no_color_stripped_message.startswith("###"):
+        message = message.replace(Fore.RESET, '')
+        message = f"{Fore.ORANGE}{message}{Fore.RESET}"
+    elif no_color_stripped_message.startswith("compiling"):
+        message = message.replace(Fore.RESET, '')
+        message = f"{Fore.GREEN}{message}{Fore.RESET}"
+    elif compile_header_regex.match(no_color_stripped_message):
+        message = message.replace(Fore.RESET, '')
+        message = f"{Fore.BOLD_WHITE}{message}{Fore.RESET}"
+    return message
 
 class ConsoleLayout:
     "The Console Frame"
@@ -185,7 +56,7 @@ class ConsoleLayout:
         )
         vertical_scrool_bar.grid(row=0, column=1, sticky=tk.N+tk.S+tk.W)
 
-        self._output = Output(self.text_widget)
+        self._output = Output(self.text_widget, apply=_add_color)
 
         return console_frame
 

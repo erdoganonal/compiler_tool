@@ -30,6 +30,7 @@ from layouts.transfer_layout import TransferLayout
 # from layouts.debug_config_layout import DebugConfigLayout
 from layouts.button_layout import ButtonLayout
 from layouts.console_layout import ConsoleLayout
+from layouts.client_layout import ClientLayout
 
 
 def main():
@@ -86,6 +87,7 @@ def render():
         git_layout=git_layout,
         menu_layout=menu_layout,
         console_layout=console_layout,
+        client_layout=ClientLayout(CONTEXT),
     )
     if not CONTEXT:
         for key, value in CONTEXT.__dict__.items():

@@ -3,6 +3,8 @@ import sys
 import os
 import re
 import enum
+import time
+import threading
 
 import tkinter as tk
 from tkinter import ttk
@@ -189,6 +191,24 @@ def configure(widget):
         configure(child)
 
 
+def normalize_text(text):
+    "applies backslashes onto given text"
+    chars = []
+    for char in text:
+        if char == '\b' and chars:
+            chars.pop()
+        else:
+            chars.append(char)
+
+    return ''.join(chars)
+
+
+def get_rid_of_coloring(text):
+    "removes coloring from given text"
+    ansi_escape = re.compile(r'\x1B[\(\[][0-?]*[ -/]*[@-~]')
+    return ansi_escape.sub('', text)
+
+
 class CompilerToolContext:
     "A context that includes entire layouts"
 
@@ -199,6 +219,7 @@ class CompilerToolContext:
         self.git_layout = None
         self.menu_layout = None
         self.transfer_layout = None
+        self.client_layout = None
 
     def register(self, **kwargs):
         "registers given arguments"
@@ -391,12 +412,137 @@ class TextWidgetWrapper:
         except AttributeError:
             return getattr(self.text_widget, value)
 
-    @staticmethod
-    def _no_color(text):
-        ansi_escape = re.compile(r'\x1B[\(\[][0-?]*[ -/]*[@-~]')
-        return ansi_escape.sub('', text)
-
     def config(self):
         "configure tags"
         for name, options in self._COLOR_DICT.items():
             self.text_widget.tag_config(name, **options)
+
+
+class Output(TextWidgetWrapper):
+    "Redirect to output the console which created by tkinter Text"
+
+    def __init__(self, text_widget, read_only=True, apply=lambda x: x):
+        super().__init__(text_widget)
+        self._is_paused = False
+        self._cache = ''
+        self._stream = None
+        self._color = ''
+        self._ready = True
+        self._read_only = read_only
+        self._apply = apply
+
+    def pause(self):
+        "Pauses the streaming"
+        self._is_paused = True
+
+    def resume(self):
+        "Starts the steaming"
+        self._is_paused = False
+        self.write(self._cache)
+        self._cache = ""
+
+    def _write_after_ready(self, message, timeout):
+        current_time = time.time()
+        spin_time = 5
+        while time.time() - current_time <= timeout:
+            if not self._ready:
+                spin_time = 5
+            elif spin_time == 0:
+                break
+            else:
+                spin_time -= 1
+            time.sleep(.5)
+        self.write(message)
+
+    def write_after_ready(self, message, timeout=10):
+        """Waits until message queue empty and writes
+        right after. If timeout occurs, writes.
+        """
+        threading.Thread(
+            target=self._write_after_ready,
+            args=(message, timeout,),
+            name=f"{__file__}::write_after_ready",
+            daemon=True
+        ).start()
+
+    @property
+    def is_paused(self):
+        "returns True if stream of console has been paused"
+        return self._is_paused
+
+    @property
+    def stream(self):
+        "The file where the console output will be written"
+        return self._stream
+
+    @stream.setter
+    def stream(self, value):
+        "the setter of the file path"
+        if value is None:
+            # streaming disable
+            try:
+                self._stream.close()
+            except AttributeError:
+                pass
+            self._stream = None
+            return
+
+        self._stream = open(value, 'w')
+
+    def _write(self, message):
+        color = self._color
+        regex = re.compile(r"\x1b\[[0-9]{0,2}")
+
+        for char in message:
+            # Entire colors starts with '\x1b'
+            if char == '\x1b':
+                color = '\x1b'
+            # Then continue with '['
+            elif color == '\x1b' and char == '[':
+                color += char
+            elif regex.match(color) and not color.endswith('m'):
+                if char == 'm':
+                    color += char
+                else:
+                    color += char
+            else:
+                if color == Fore.RESET:
+                    color = ''
+                elif color in self._COLOR_DICT:
+                    self.text_widget.insert(tk.END, char, color)
+                    continue
+
+                self.text_widget.insert(tk.END, char, Fore.RESET)
+
+        self._color = color
+
+    def write(self, message):
+        """The class must have write function to catch the
+        output which comes through."""
+        if self.text_widget is None:
+            return
+
+        self._ready = False
+        message = self._apply(message)
+
+        if self.is_paused:
+            self._cache += message
+            return
+
+        if self.stream is not None:
+            self.stream.write(self._no_color(message))
+            self.stream.flush()
+
+        if self._read_only:
+            self.text_widget.config(state=tk.NORMAL)
+
+        self._write(message)
+
+        self.text_widget.see(tk.END)
+        if self._read_only:
+            self.text_widget.config(state=tk.DISABLED)
+
+        self._ready = True
+
+    def flush(self):
+        "No need to cache the output. Prints immediately."

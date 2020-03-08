@@ -139,6 +139,7 @@ class ButtonLayout:
         threading.Thread(
             target=self._process_file_watcher,
             args=(TEMPORY_FILE,),
+            name=f"{__file__}::_start_operation_in_bg",
             daemon=True
         ).start()
 

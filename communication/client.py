@@ -3,42 +3,23 @@ A simple client. Sends data to server
 Receives the result and prints.
 """
 
-import sys
 import os
 import socket
 import ssl
 import threading
 import time
-import msvcrt
 
-from communication_base import to_file, \
-    DEFAULT_PORT, SHUTDOWN_SERVER_CMD, \
-    DEFAULT_ENCODING
-from cert.client_crt import CLIENT_KEY, CLIENT_CERT
-from cert.server_crt import SERVER_CERT
-from input_interrupt import InputWithInterrupt
+from communication.communication_base import to_file
+from communication.cert.client_crt import CLIENT_KEY, CLIENT_CERT
+from communication.cert.server_crt import SERVER_CERT
 
 SERVER_SNI_HOSTNAME = 'erdogan.onal'
-
-
-def main():
-    "Starts from here"
-    Client(
-        host=socket.gethostbyaddr(socket.gethostname())[2][0],
-        port=DEFAULT_PORT,
-    ).start_communication()
 
 
 class Client:
     """A simple client."""
 
-    def __init__(self, host: str = None, port: int = None):
-        if host is None:
-            host = socket.gethostbyaddr(socket.gethostname())[2][0]
-
-        if port is None:
-            port = DEFAULT_PORT
-
+    def __init__(self, host: str, port: int):
         server_cert = to_file(SERVER_CERT)
         client_key = to_file(CLIENT_KEY)
         client_cert = to_file(CLIENT_CERT)
@@ -55,9 +36,7 @@ class Client:
 
         self._stdout_client.connect((host, port))
 
-        self._host = host
-        self._port = port
-        self._is_active = True
+        self._is_active = False
 
         self._files = [
             server_cert,
@@ -65,92 +44,62 @@ class Client:
             client_cert
         ]
 
-    @classmethod
-    def _get_command(cls, encode: bool = False):
-        command = "{0}\n".format(input()).encode(DEFAULT_ENCODING)
-        if encode:
-            return command
-        return command.decode(DEFAULT_ENCODING)
+        self._lock = threading.Lock()
+        self._buffer = b''
+        threading.Thread(
+            target=self._recv,
+            name=f"{__file__}::__init__",
+            daemon=True,
+        ).start()
 
     @property
-    def host(self):
-        "The hostname of the client"
-        return self._host
+    def buffer(self):
+        "returns the current buffer"
+        buffer = b''
+        with self._lock:
+            buffer, self._buffer = self._buffer, b''
 
-    @property
-    def port(self):
-        "The port of the client"
-        return self._port
+        return buffer
+
+    @buffer.setter
+    def buffer(self, value: bytes):
+        "appends given value to buffer"
+        with self._lock:
+            self._buffer += value
+        return len(value)
 
     @property
     def client_object(self):
         "Return the actual client object"
         return self._stdout_client
 
-    def start_communication(self):
-        "Starts the communication"
-        print(
-            "\n\nConnected to the host. Enjoy the console :)\n\n"
-            "Type 'exit' to close the client.\n"
-            "Type '{0}' to close the client and"
-            " server as well.\n\n"
-            "".format(SHUTDOWN_SERVER_CMD.decode(DEFAULT_ENCODING))
-        )
+    def send_command(self, command):
+        "sends command to the server"
+        if self._is_active:
+            self._stdout_client.send(command)
 
-        threading.Thread(
-            target=self._read_data_from_console,
-            name="_read_stdout_from_console",
-            daemon=True,
-        ).start()
-
-        threading.Thread(
-            target=self._send_commands,
-            name="_send_commands",
-            daemon=True,
-        ).start()
-
+    def readline(self):
+        "yields first line from buffer"
+        i = 0
         while self._is_active:
-            time.sleep(0.5)
+            i += 1
+            with self._lock:
+                buffer = self._buffer.splitlines()
+                self._buffer = b"\n".join(buffer[1:])
+            if buffer:
+                yield b'\n' + buffer[0]
+            else:
+                time.sleep(0.1)
 
-    def _send_commands(self):
-        custom_input = InputWithInterrupt()
-        custom_input.add_auto_complate(
-            "shutdown-server"
-        )
+    def _recv(self):
+        self._is_active = True
         while self._is_active:
             try:
-                command = (custom_input.input() + '\n').encode()
-            except KeyboardInterrupt:
-                command = '\n'
-            if self._is_active:
-                self._stdout_client.send(command)
-
-    def _send_commands1(self):
-        command = b''
-        while self._is_active:
-            char = msvcrt.getch()
-            command += char
-            if char == b'\r':
-                char += b'\n'
-                command += b'\n'
-                if self._is_active:
-                    self._stdout_client.send(command)
-                command = b''
-            try:
-                print(char.decode(), end='', flush=True)
-            except UnicodeDecodeError:
-                pass
-
-    def _read_data_from_console(self):
-        while self._is_active:
-            try:
-                buffer = self._stdout_client.recv(1).decode()
-                sys.stdout.write(buffer)
-                sys.stdout.flush()
+                self.buffer = self._stdout_client.recv(1)
             except ConnectionError:
-                print("Connection closed.")
+                self.buffer = b"\nConnection closed.\n"
+                time.sleep(0.2)
                 self._is_active = False
-                sys.exit()
 
     def __del__(self):
         if hasattr(self, "_files"):
@@ -161,7 +110,3 @@ class Client:
                     pass
         self._is_active = False
         self._stdout_client.close()
-
-
-if __name__ == "__main__":
-    main()

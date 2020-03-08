@@ -348,6 +348,9 @@ class Menu(LayoutBase):
             need_toogle=need_toogle
         )
 
+    def _open_terminal(self):
+        self._context.client_layout.render()
+
     def render(self, parent, **grid_options):
         "renders the menu frame"
         menu_bar = tk.Frame(parent)
@@ -361,6 +364,7 @@ class Menu(LayoutBase):
         self._render_file_menu(file_menu)
         self._render_screen_menu(menu_bar)
         self._render_config(menu_bar)
+        self._render_communication_menu(menu_bar)
         self._render_help_menu(menu_bar)
 
         return menu_bar
@@ -422,13 +426,13 @@ class Menu(LayoutBase):
         screen_menu.menu = menu
 
     def _render_config(self, menu_bar):
-        help_menu = ttk.Menubutton(menu_bar, text="Configurations")
-        help_menu.grid(**self.get_next_position(
+        configuration_menu = ttk.Menubutton(menu_bar, text="Configurations")
+        configuration_menu.grid(**self.get_next_position(
             row=False, column=True, pady=0
         ))
 
-        menu = tk.Menu(help_menu, tearoff=False, activeborderwidth=0)
-        help_menu["menu"] = menu
+        menu = tk.Menu(configuration_menu, tearoff=False, activeborderwidth=0)
+        configuration_menu["menu"] = menu
 
         menu.add_command(
             label="Start full screen", foreground="white",
@@ -436,7 +440,23 @@ class Menu(LayoutBase):
         )
         self._toggles[self._toggle_screen_state] = (menu, 0)
 
-        help_menu.menu = menu
+        configuration_menu.menu = menu
+
+    def _render_communication_menu(self, menu_bar):
+        communication_menu = ttk.Menubutton(menu_bar, text="Comminication")
+        communication_menu.grid(**self.get_next_position(
+            row=False, column=True, pady=0
+        ))
+
+        menu = tk.Menu(communication_menu, tearoff=False, activeborderwidth=0)
+        communication_menu["menu"] = menu
+
+        menu.add_command(
+            label="Open Terminal", foreground="white",
+            command=self._open_terminal,
+        )
+
+        communication_menu.menu = menu
 
     def _render_help_menu(self, menu_bar):
         help_menu = ttk.Menubutton(menu_bar, text="?")
