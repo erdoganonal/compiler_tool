@@ -151,8 +151,9 @@ class ButtonLayout:
         self._cancel_button.configure(state=tk.DISABLED)
 
         if is_user:
-            self._context.console_layout.write(
-                "{0}\nOperation canceled by user!\n".format(Fore.RED)
+            self._context.console_layout.write_after_ready(
+                "{0}\nOperation canceled by user!\n".format(Fore.RED),
+                timeout=5
             )
 
     def render(self, parent, **grid_options):
